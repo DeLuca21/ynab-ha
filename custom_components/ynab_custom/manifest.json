@@ -3,7 +3,6 @@
   "name": "YNAB Custom",
   "version": "1.0.0",
   "documentation": "https://github.com/DeLuca21/hacs-ynab",
-  "issue_tracker": "https://github.com/DeLuca21/hacs-ynab/issues",
   "dependencies": [],
   "codeowners": ["@DeLuca21"],
   "requirements": ["requests"],
