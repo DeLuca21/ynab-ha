@@ -2,9 +2,8 @@
   "name": "YNAB Custom",
   "domain": "ynab_custom",
   "country": "AUS",
-  "homeassistant": "2025.2.4",
+  "homeassistant": "2024.2.0",
   "render_readme": true,
   "zip_release": false,
-  "content_in_root": false,
-  "source": "https://github.com/DeLuca21/hacs-ynab"
+  "content_in_root": false
 }
