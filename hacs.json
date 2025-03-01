@@ -5,6 +5,7 @@
   "homeassistant": "2025.2.4",
   "render_readme": true,
   "zip_release": false,
+  "content_in_root": false,
   "filename": "custom_components/ynab_custom/",
   "source": "https://github.com/DeLuca21/hacs-ynab"
 }
