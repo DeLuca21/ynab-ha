@@ -1,6 +1,8 @@
 {
   "name": "YNAB Custom",
-  "homeassistant": "2024.12",
-  "hacs": "1.33.0",
-  "render_readme": true
+  "domain": "ynab_custom",
+  "homeassistant": "2024.2.0",
+  "render_readme": true,
+  "zip_release": false,
+  "content_in_root": false
 }
