@@ -1,1 +1,0 @@
-DOMAIN = "ynab_custom"
