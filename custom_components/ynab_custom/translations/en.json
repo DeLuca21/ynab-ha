@@ -1,0 +1,25 @@
+{
+  "title": "YNAB Custom",
+  "config": {
+    "step": {
+      "user": {
+        "title": "Setup YNAB",
+        "description": "Enter your YNAB API Key to connect.",
+        "data": {
+          "api_key": "YNAB API Key"
+        }
+      }
+    },
+    "error": {
+      "invalid_api_key": "Invalid API Key, please check and try again."
+    }
+  },
+  "options": {
+    "step": {
+      "init": {
+        "title": "Options",
+        "description": "Configure additional settings."
+      }
+    }
+  }
+}
