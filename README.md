@@ -7,7 +7,7 @@
 
 
 <p align="center">
-  <img src="https://github.com/DeLuca21/hacs-ynab/raw/main/assets/ynab_logo.png" alt="YNAB Logo" width="300">
+  <img src="https://raw.githubusercontent.com/DeLuca21/hacs-ynab/refs/heads/main/raw/main/assets/yanb_logo.png?token=GHSAT0AAAAAAC7MA24YUCZRZCIEPZNPZF3GZ6CQSAA" alt="YNAB Logo" width="300">
 </p>
 <p align="center">
   <a href="https://ko-fi.com/DeLuca21" target="_blank">
