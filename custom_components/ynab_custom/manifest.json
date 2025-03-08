@@ -1,12 +1,13 @@
 {
   "domain": "ynab_custom",
-  "name": "YNAB Custom",
-  "version": "1.0.0",
+  "name": "YNAB Integration for Home Assistant",
+  "version": "1.2.0",
   "documentation": "https://github.com/DeLuca21/hacs-ynab",
   "dependencies": [],
   "codeowners": ["@DeLuca21"],
-  "requirements": ["requests"],
+  "requirements": ["aiohttp"],
   "iot_class": "cloud_polling",
   "config_flow": true,
   "multi_instance": true
 }
+

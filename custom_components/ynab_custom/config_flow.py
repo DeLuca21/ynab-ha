@@ -1,133 +1,191 @@
-import voluptuous as vol
-from homeassistant import config_entries
-from homeassistant.core import callback
-from homeassistant.helpers.aiohttp_client import async_get_clientsession
-import aiohttp
+from __future__ import annotations
+
 import logging
+import voluptuous as vol
+from typing import Any, Dict
 
-from .const import DOMAIN
+from homeassistant import config_entries, exceptions
+from homeassistant.const import CONF_ACCESS_TOKEN
+from homeassistant.helpers import config_validation as cv
+from homeassistant.data_entry_flow import FlowResult
 
-API_URL = "https://api.youneedabudget.com/v1"
+from .const import DOMAIN, CONF_SELECTED_ACCOUNTS, CONF_SELECTED_CATEGORIES, CONF_CURRENCY, CONF_SELECTED_BUDGET, CONF_UPDATE_INTERVAL
+from .api import YNABApi
+
 _LOGGER = logging.getLogger(__name__)
 
-SUPPORTED_CURRENCIES = {
-    "USD": "US Dollar ($)",
-    "EUR": "Euro (€)",
-    "GBP": "British Pound (£)",
-    "AUD": "Australian Dollar (A$)",
-    "CAD": "Canadian Dollar (C$)",
-    "NZD": "New Zealand Dollar (NZ$)",
-    "JPY": "Japanese Yen (¥)",
+SELECT_ALL_OPTION = "Select All"
+
+# Supported currency options
+CURRENCY_OPTIONS = {
+    "USD": "$ (US Dollar)",
+    "EUR": "€ (Euro)",
+    "GBP": "£ (British Pound)",
+    "AUD": "A$ (Australian Dollar)",
+    "CAD": "C$ (Canadian Dollar)",
+    "JPY": "¥ (Japanese Yen)",
+    "CHF": "CHF (Swiss Franc)",
+    "SEK": "kr (Swedish Krona)",
+    "NZD": "NZ$ (New Zealand Dollar)",
 }
 
-default_update_interval = 300  # in seconds
-default_category_group_summaries = True
+# Polling interval options (1-60 minutes)
+POLLING_INTERVAL_OPTIONS = {i: f"{i} minute{'s' if i > 1 else ''}" for i in range(1, 61)}
 
-async def async_get_ynab_budgets(api_key, hass):
-    """Fetch budgets from YNAB API asynchronously."""
-    headers = {"Authorization": f"Bearer {api_key}"}
-    session = async_get_clientsession(hass)
+# Function to sanitize the budget name
+def sanitize_budget_name(budget_name: str) -> str:
+    """Sanitize the budget name to create a valid Home Assistant entity ID."""
+    # Replace spaces with underscores and remove any special characters
+    sanitized_name = re.sub(r'[^a-zA-Z0-9_]', '', budget_name.replace(" ", "_"))
+    return sanitized_name
 
-    try:
-        async with session.get(f"{API_URL}/budgets", headers=headers, timeout=10) as response:
-            response.raise_for_status()
-            data = await response.json()
-            return {budget["id"]: budget["name"] for budget in data["data"]["budgets"]}
-    except aiohttp.ClientError as e:
-        _LOGGER.error("YNAB API error: %s", e)
-        return {}
+class ConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
+    """Handle a config flow for YNAB Custom integration."""
 
-class YNABConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
-    """Handle the YNAB config flow."""
-    VERSION = 1
+    VERSION = "1.2.0"
 
-    async def async_step_user(self, user_input=None):
-        """Handle the initial setup step."""
+    async def async_step_user(self, user_input: Dict[str, Any] | None = None) -> FlowResult:
+        """Handle the initial step to enter an access token."""
         errors = {}
 
-        if user_input is not None:
-            api_key = user_input["api_key"]
-            budgets = await async_get_ynab_budgets(api_key, self.hass)
-
-            if not budgets:
-                errors["base"] = "no_budgets_found"
-            else:
-                self.budgets = budgets
-                self.api_key = api_key
-                return await self.async_step_budget_selection()
-
-        return self.async_show_form(
-            step_id="user",
-            data_schema=vol.Schema(
-                {
-                    vol.Required("api_key"): str
-                }
-            ),
-            errors=errors,
-        )
-
-    async def async_step_budget_selection(self, user_input=None):
-        """Let user select a budget, set instance name, and choose currency."""
-        errors = {}
-
-        if user_input is not None:
-            return self.async_create_entry(
-                title=user_input["instance_name"] or self.budgets[user_input["budget_id"]],
-                data={
-                    "api_key": self.api_key,
-                    "budget_id": user_input["budget_id"],
-                    "instance_name": user_input["instance_name"],
-                },
-                options={
-                    "currency": user_input["currency"],
-                    "update_interval": default_update_interval,
-                    "category_group_summaries": default_category_group_summaries
-                }
+        if user_input is None:
+            return self.async_show_form(
+                step_id="user",
+                data_schema=vol.Schema({
+                    vol.Required(CONF_ACCESS_TOKEN): str
+                }),
+                errors=errors
             )
+
+        try:
+            self.access_token = user_input[CONF_ACCESS_TOKEN]
+            self.api = YNABApi(self.access_token)
+
+            budgets_response = await self.api.get_budgets()
+            if not budgets_response or "budgets" not in budgets_response:
+                raise CannotConnect
+
+            self.budgets = {b["id"]: b["name"] for b in budgets_response["budgets"]}
+            _LOGGER.debug("Available budgets: %s", self.budgets)
+
+            return await self.async_step_budget_selection()
+
+        except CannotConnect:
+            errors["base"] = "cannot_connect"
+        except InvalidAuth:
+            errors["base"] = "invalid_auth"
+        except Exception:
+            _LOGGER.exception("Unexpected exception")
+            errors["base"] = "unknown"
+
+        return self.async_show_form(step_id="user", errors=errors)
+
+    async def async_step_budget_selection(self, user_input: Dict[str, Any] | None = None) -> FlowResult:
+        """Handle budget selection."""
+        errors = {}
+
+        if user_input is not None:
+            selected_budget_id = user_input[CONF_SELECTED_BUDGET]
+
+            if not selected_budget_id or selected_budget_id not in self.budgets:
+                _LOGGER.error("Invalid budget selected: %s", selected_budget_id)
+                return self.async_abort(reason="invalid_budget")
+
+            self.budget_id = selected_budget_id
+            self.budget_name = self.budgets[self.budget_id]
+
+            # Fetch accounts and categories now that we know the budget
+            accounts_response = await self.api.get_accounts(self.budget_id)
+            categories_response = await self.api.get_categories(self.budget_id)
+
+            self.accounts = {a["id"]: a["name"] for a in accounts_response.get("accounts", [])}
+            self.categories = {
+                c["id"]: c["name"]
+                for group in categories_response.get("category_groups", [])
+                for c in group.get("categories", [])
+            }
+
+            _LOGGER.debug("Fetched %d accounts and %d categories", len(self.accounts), len(self.categories))
+
+            return await self.async_step_config_page()
+
+        schema = vol.Schema({
+            vol.Required(CONF_SELECTED_BUDGET): vol.In(self.budgets)
+        })
 
         return self.async_show_form(
             step_id="budget_selection",
-            data_schema=vol.Schema({
-                vol.Required("budget_id"): vol.In(self.budgets),
-                vol.Required("instance_name", default=""): str,
-                vol.Required("currency", default="USD"): vol.In(SUPPORTED_CURRENCIES)
-            }),
-            errors=errors,
+            data_schema=schema,
+            errors=errors
         )
 
-    @staticmethod
-    @callback
-    def async_get_options_flow(config_entry):
-        """Return the options flow handler."""
-        return YNABOptionsFlowHandler(config_entry)
+    async def async_step_config_page(self, user_input: Dict[str, Any] | None = None) -> FlowResult:
+        """Prompt for instance name, currency, update interval, accounts, and categories on a single page."""
+        errors = {}
 
-class YNABOptionsFlowHandler(config_entries.OptionsFlow):
-    """Handle an options flow for YNAB."""
+        # Default values for the prompt fields
+        if user_input is None:
+            user_input = {}
 
-    def __init__(self, config_entry):
-        """Initialize options flow."""
-        super().__init__()
-        self._config_entry = config_entry
+        selected_accounts = user_input.get(CONF_SELECTED_ACCOUNTS, [SELECT_ALL_OPTION])  # Default to "Select All"
+        selected_categories = user_input.get(CONF_SELECTED_CATEGORIES, [SELECT_ALL_OPTION])  # Default to "Select All"
+        selected_currency = user_input.get(CONF_CURRENCY, "USD")  # Default currency
+        update_interval = user_input.get(CONF_UPDATE_INTERVAL, 5)  # Default to 5 minutes
 
-    async def async_step_init(self, user_input=None):
-        """Manage the options."""
-        if user_input is not None:
-            return self.async_create_entry(title="", data=user_input)
+        if user_input:
+            self.instance_name = user_input.get("instance_name", self.budget_name)  # Default to raw budget name
+            self.selected_currency = selected_currency
+            self.update_interval = update_interval
+
+            # If "Select All" is selected, use the entire list of accounts/categories
+            if SELECT_ALL_OPTION in selected_accounts:
+                selected_accounts = list(self.accounts.keys())
+            if SELECT_ALL_OPTION in selected_categories:
+                selected_categories = list(self.categories.keys())
+
+            self.selected_accounts = selected_accounts
+            self.selected_categories = selected_categories
+
+            return await self.async_step_create_entry()
+
+        # Add "Select All" as an option to the dropdown
+        account_options = {**self.accounts, SELECT_ALL_OPTION: "Select All Accounts"}
+        category_options = {**self.categories, SELECT_ALL_OPTION: "Select All Categories"}
+
+        schema = vol.Schema({
+            vol.Optional("instance_name", default=self.budget_name): str,  # Default to raw budget name
+            vol.Required(CONF_CURRENCY, default="USD"): vol.In(CURRENCY_OPTIONS),  # Default currency
+            vol.Required(CONF_UPDATE_INTERVAL, default=5): vol.In(POLLING_INTERVAL_OPTIONS),
+            vol.Required(CONF_SELECTED_ACCOUNTS, default=[SELECT_ALL_OPTION]): cv.multi_select(account_options),
+            vol.Required(CONF_SELECTED_CATEGORIES, default=[SELECT_ALL_OPTION]): cv.multi_select(category_options),
+        })
 
         return self.async_show_form(
-            step_id="init",
-            data_schema=vol.Schema({
-                vol.Optional(
-                    "currency",
-                    default=self._config_entry.options.get("currency", "USD")
-                ): vol.In(SUPPORTED_CURRENCIES),
-                vol.Optional(
-                    "update_interval",
-                    default=self._config_entry.options.get("update_interval", default_update_interval)
-                ): vol.All(vol.Coerce(int), vol.Range(min=60, max=3600)),
-                vol.Optional(
-                    "category_group_summaries",
-                    default=self._config_entry.options.get("category_group_summaries", default_category_group_summaries)
-                ): bool
-            })
+            step_id="config_page",
+            data_schema=schema,
+            errors=errors
         )
+
+    async def async_step_create_entry(self) -> FlowResult:
+        """Create the entry with the user data."""
+        return self.async_create_entry(
+            title=self.instance_name,  # Use the raw instance name (display name)
+            data={
+                CONF_ACCESS_TOKEN: self.access_token,
+                "budget_id": self.budget_id,
+                "budget_name": self.budget_name,  # Store the raw budget name
+                CONF_CURRENCY: self.selected_currency,  # Store selected currency
+                CONF_SELECTED_ACCOUNTS: self.selected_accounts,
+                CONF_SELECTED_CATEGORIES: self.selected_categories,
+                CONF_UPDATE_INTERVAL: self.update_interval,  # Store the selected update interval
+                "instance_name": self.instance_name,  # Make sure instance_name is added here
+            },
+        )
+
+# Define CannotConnect exception
+class CannotConnect(exceptions.HomeAssistantError):
+    """Error to indicate we cannot connect."""
+
+# Define InvalidAuth exception
+class InvalidAuth(exceptions.HomeAssistantError):
+    """Error to indicate invalid authentication."""

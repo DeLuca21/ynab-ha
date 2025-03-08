@@ -1,444 +1,261 @@
-from homeassistant.components.sensor import SensorEntity
-from homeassistant.helpers.update_coordinator import DataUpdateCoordinator, CoordinatorEntity
-from homeassistant.helpers.service import async_register_admin_service
-from homeassistant.helpers.aiohttp_client import async_get_clientsession
-import aiohttp
-import asyncio
 import logging
-from datetime import timedelta
-
+import re
+from datetime import datetime
+from homeassistant.helpers.update_coordinator import CoordinatorEntity
+from homeassistant.components.sensor import SensorEntity
+from homeassistant.const import CONF_CURRENCY
+from .coordinator import YNABDataUpdateCoordinator
 from .const import DOMAIN
+from .icons import CATEGORY_ICONS, ACCOUNT_ICONS
 
 _LOGGER = logging.getLogger(__name__)
 
-API_URL = "https://api.youneedabudget.com/v1"
-UPDATE_INTERVAL = timedelta(minutes=10)
+def sanitize_budget_name(budget_name: str) -> str:
+    """Sanitize the budget name to create a valid Home Assistant entity ID."""
+    # Sanitize for the entity ID (replace spaces with underscores and remove special characters)
+    sanitized_name = re.sub(r'[^a-zA-Z0-9_]', '', budget_name.replace(" ", "_"))
+    return sanitized_name
 
-CURRENCY_SYMBOLS = {
-    "USD": "$",
-    "EUR": "€",
-    "GBP": "£",
-    "AUD": "A$",
-    "CAD": "C$",
-    "NZD": "NZ$",
-    "JPY": "¥"
-}
-
-
-class YNABCoordinator(DataUpdateCoordinator):
-    """Class to manage fetching YNAB data efficiently."""
-
-    def __init__(self, hass, api_key, budget_id, update_interval):
-        """Initialize the coordinator."""
-        self.api_key = api_key
-        self.budget_id = budget_id
-        self.session = async_get_clientsession(hass)
-        self.last_data = None
-
-        super().__init__(
-            hass,
-            _LOGGER,
-            name=f"YNAB-{budget_id}",
-            update_interval=timedelta(seconds=update_interval),
-        )
-
-    async def _async_update_data(self):
-        """Fetch data from YNAB API efficiently."""
-        new_data = await self._async_get_ynab_data()
-        if new_data == self.last_data:
-            _LOGGER.info("No changes detected in YNAB data, skipping update")
-            return self.last_data
-        self.last_data = new_data
-        return new_data
-
-    async def _async_get_ynab_data(self):
-        """Fetch accounts & categories from YNAB API with rate limit handling."""
-        headers = {"Authorization": f"Bearer {self.api_key}"}
-
-        async def fetch_url(url):
-            try:
-                async with self.session.get(url, headers=headers, timeout=15) as response:
-                    if response.status == 429:
-                        _LOGGER.warning("YNAB API rate limit reached, retrying in 30 sec")
-                        await asyncio.sleep(30)
-                        return await fetch_url(url)
-                    response.raise_for_status()
-                    return await response.json()
-            except aiohttp.ClientError as e:
-                _LOGGER.error("YNAB API error: %s", e)
-                return None
-
-        accounts_url = f"{API_URL}/budgets/{self.budget_id}/accounts"
-        categories_url = f"{API_URL}/budgets/{self.budget_id}/categories"
-
-        accounts = await fetch_url(accounts_url)
-        categories = await fetch_url(categories_url)
-
-        return {
-            "accounts": accounts["data"]["accounts"] if accounts else [],
-            "categories": categories["data"]["category_groups"] if categories else [],
-        }
-
+def get_currency_symbol(currency_code):
+    """Convert currency code to symbol."""
+    currency_map = {
+        "USD": "$",
+        "EUR": "€",
+        "GBP": "£",
+        "AUD": "A$",
+        "CAD": "C$",
+        "JPY": "¥",
+        "CHF": "CHF",
+        "SEK": "kr",
+        "NZD": "NZ$",
+    }
+    return currency_map.get(currency_code, "$")
 
 async def async_setup_entry(hass, entry, async_add_entities):
     """Set up YNAB sensors."""
-    api_key = entry.data["api_key"]
-    budget_id = entry.data["budget_id"]
-    instance_name = entry.data.get("instance_name", "api")
+    coordinator: YNABDataUpdateCoordinator = hass.data[DOMAIN][entry.entry_id]
+    selected_currency = entry.data.get(CONF_CURRENCY, "USD")  # Get user-selected currency
+    currency_symbol = get_currency_symbol(selected_currency)  # Convert to symbol
 
-    currency = entry.options.get("currency", "USD")
-    update_interval = entry.options.get("update_interval", 300)
-    include_category_summaries = entry.options.get("category_group_summaries", True)
-    include_budget_summary_sensors = entry.options.get("budget_wide_summary", True)
+    entities = []
+    raw_budget_name = entry.data["budget_name"]
+    sanitized_budget_name = sanitize_budget_name(raw_budget_name)  # Sanitize the budget name for unique ID
 
-    coordinator = YNABCoordinator(hass, api_key, budget_id, update_interval)
-    await coordinator.async_config_entry_first_refresh()
+    # Use the raw budget name for instance name (display)
+    instance_name = raw_budget_name
 
-    if coordinator.data is None:
-        _LOGGER.error("No data retrieved from YNAB API, sensors not added")
+    # Get the current month in YYYY-MM-01 format
+    current_month = datetime.now().strftime("%Y-%m-01")
+
+    # Fetch monthly summary for the current month
+    try:
+        monthly_summary = await coordinator.api.get_monthly_summary(coordinator.budget_id, current_month)
+        _LOGGER.debug(f"Monthly Summary Response: {monthly_summary}")
+    except Exception as e:
+        _LOGGER.error(f"Error fetching monthly summary for {current_month}: {e}")
         return
 
-    sensors = []
+    # Log the response for debugging
+    if "month" not in monthly_summary:
+        _LOGGER.error(f"No 'month' data found in response for {current_month}. Full response: {monthly_summary}")
+        return
 
-    # 1) Budget Sensor (API Status)
-    sensors.append(
-        YNABBudgetSensor(
-            coordinator,
-            budget_id,
-            instance_name,
-            currency
-        )
-    )
+    # If the monthly_summary is empty or not fetched properly, log and return
+    if not monthly_summary or "month" not in monthly_summary:
+        _LOGGER.error(f"Monthly summary data is empty or not correctly structured for {current_month}. Full response: {monthly_summary}")
+        return
 
-    # 2) Account Sensors
-    for account in coordinator.data["accounts"]:
-        sensors.append(
-            YNABAccountSensor(
-                coordinator,
-                budget_id,
-                instance_name,
-                account["id"],
-                account["name"],
-                currency
-            )
-        )
+    # Create a separate Monthly Summary sensor as its own device/service
+    entities.append(YNABMonthSummarySensor(coordinator, monthly_summary, currency_symbol, instance_name))
 
-    # 3) Category Group + Category Sensors
-    for group in coordinator.data["categories"]:
-        if include_category_summaries:
-            sensors.append(
-                YNABCategoryGroupSensor(
-                    coordinator,
-                    budget_id,
-                    instance_name,
-                    group["id"],
-                    group["name"],
-                    currency,
-                    "budgeted",
-                    f"YNAB {group['name']} Assigned"
-                )
-            )
-            sensors.append(
-                YNABCategoryGroupSensor(
-                    coordinator,
-                    budget_id,
-                    instance_name,
-                    group["id"],
-                    group["name"],
-                    currency,
-                    "activity",
-                    f"YNAB {group['name']} Activity"
-                )
-            )
-            sensors.append(
-                YNABCategoryGroupSensor(
-                    coordinator,
-                    budget_id,
-                    instance_name,
-                    group["id"],
-                    group["name"],
-                    currency,
-                    "balance",
-                    f"YNAB {group['name']} Balance"
-                )
-            )
+    # Create account sensors
+    for account in coordinator.data.get("accounts", []):
+        if account["id"] in coordinator.selected_accounts:
+            entities.append(YNABAccountSensor(coordinator, account, entry, currency_symbol, instance_name))
 
-        for category in group["categories"]:
-            sensors.append(
-                YNABCategorySensor(
-                    coordinator,
-                    budget_id,
-                    instance_name,
-                    category["id"],
-                    category["name"],
-                    currency,
-                    "activity",
-                    "YNAB Budget - Categories - Activity"
-                )
-            )
-            sensors.append(
-                YNABCategorySensor(
-                    coordinator,
-                    budget_id,
-                    instance_name,
-                    category["id"],
-                    category["name"],
-                    currency,
-                    "budgeted",
-                    "YNAB Budget - Categories - Assigned"
-                )
-            )
-            sensors.append(
-                YNABCategorySensor(
-                    coordinator,
-                    budget_id,
-                    instance_name,
-                    category["id"],
-                    category["name"],
-                    currency,
-                    "balance",
-                    "YNAB Budget - Categories - Balance"
-                )
-            )
+    # Create category sensors
+    for category in coordinator.data.get("categories", []):
+        if category["id"] in coordinator.selected_categories:
+            entities.append(YNABCategorySensor(coordinator, category, entry, currency_symbol, instance_name))
 
-    # 4) Budget-Wide Summary Sensors
-    if include_budget_summary_sensors:
-        sensors.append(
-            YNABBudgetSummarySensor(
-                coordinator,
-                budget_id,
-                instance_name,
-                currency,
-                "budgeted",
-                "YNAB Entire Budget - Assigned"
-            )
-        )
-        sensors.append(
-            YNABBudgetSummarySensor(
-                coordinator,
-                budget_id,
-                instance_name,
-                currency,
-                "activity",
-                "YNAB Entire Budget - Activity"
-            )
-        )
-        sensors.append(
-            YNABBudgetSummarySensor(
-                coordinator,
-                budget_id,
-                instance_name,
-                currency,
-                "balance",
-                "YNAB Entire Budget - Balance"
-            )
-        )
-
-    async_add_entities(sensors, True)
-    async_register_admin_service(hass, "ynab_custom", "refresh", coordinator.async_refresh)
+    # Add the entity list for the sensors
+    async_add_entities(entities)
 
 
-#
-# Sensor Classes
-#
-class YNABBudgetSensor(CoordinatorEntity, SensorEntity):
-    """YNAB API Status sensor for Home Assistant."""
+class YNABMonthSummarySensor(SensorEntity):
+    """Representation of the YNAB monthly summary sensor."""
 
-    def __init__(self, coordinator, budget_id, instance_name, currency):
-        super().__init__(coordinator)
-        self.budget_id = budget_id
+    def __init__(self, coordinator: YNABDataUpdateCoordinator, monthly_summary, currency_symbol, instance_name):
+        """Initialize the sensor."""
+        self.coordinator = coordinator
+        self.monthly_summary = monthly_summary
+        self.currency_symbol = currency_symbol  # Now passing currency_symbol from the config flow
         self.instance_name = instance_name
-        self.currency = currency
+        self._state = None
+        # Updated name format
+        self._name = f"Latest Monthly Summary {self.instance_name}"
+        self._unique_id = f"ynab_{self.coordinator.entry.entry_id}_monthly_summary"
+        self._attr_extra_state_attributes = {}
 
-        self._attr_unique_id = f"ynab_{instance_name}_{budget_id}_api_status"
+        # Set default icon for the sensor
+        self._attr_icon = "mdi:calendar-month"
+
+        # Define the unique ID for the device (monthly summary will be a separate device)
         self._attr_device_info = {
-            "identifiers": {(DOMAIN, f"{budget_id}_api_status")},
-            "name": "YNAB Budget - API Status",
+            "identifiers": {(DOMAIN, f"{self.coordinator.entry.entry_id}_extras")},  # Generic device name
+            "name": f"YNAB {self.instance_name} - Extras",  # Name the device/service as "YNAB <instance_name> - Extras"
             "manufacturer": "YNAB",
-            "model": "YNAB API Status"
+            "model": "YNAB Extras",
+            "entry_type": "service",
         }
-        self._attr_icon = "mdi:api"
+
+        _LOGGER.debug(f"Initialized YNABMonthSummarySensor with ID: {self._unique_id}")
+
+    async def async_added_to_hass(self):
+        """Call when entity is added to hass."""
+        await super().async_added_to_hass()
+        # Fetch and update attributes when the sensor is added to HA
+        self.update_attributes()
+
+    def update_attributes(self):
+        """Update attributes from coordinator data."""
+        if self.monthly_summary and 'month' in self.monthly_summary:
+            month_data = self.monthly_summary.get('month', {})
+            if month_data:
+                # Set the state as the activity (default to activity if not found)
+                self._state = month_data.get('activity', 0) / 1000  # Default to 0 if activity is missing
+                self._attr_extra_state_attributes = {
+                    "budgeted": month_data.get('budgeted', 0) / 1000,
+                    "activity": month_data.get('activity', 0) / 1000,
+                    "to_be_budgeted": month_data.get('to_be_budgeted', 0) / 1000,
+                    "age_of_money": month_data.get('age_of_money', 0),
+                }
+            else:
+                _LOGGER.error(f"Failed to retrieve valid month data for {self.instance_name}")
+                self._state = None
+        else:
+            _LOGGER.error(f"No month data found in coordinator data for {self.instance_name}")
 
     @property
     def name(self):
-        return f"YNAB API {self.instance_name} Status"
+        """Return the name of the sensor."""
+        return self._name
 
     @property
-    def state(self):
-        return self.coordinator.last_update_success
+    def unique_id(self):
+        """Return the unique id of the sensor."""
+        return self._unique_id
+
+    @property
+    def native_value(self):
+        """Return the state of the sensor (activity)."""
+        return self._state
+
+    @property
+    def extra_state_attributes(self):
+        """Return additional state attributes."""
+        return self._attr_extra_state_attributes
+
+    @property
+    def native_unit_of_measurement(self):
+        """Return the unit of measurement."""
+        return self.currency_symbol  # Use currency symbol here
+
+    @property
+    def icon(self):
+        """Return the icon for the sensor."""
+        return self._attr_icon  # Return the default icon for the monthly summary sensor
 
 
 class YNABAccountSensor(CoordinatorEntity, SensorEntity):
-    """YNAB Account Balance sensor for Home Assistant."""
+    """YNAB Account Sensor."""
 
-    def __init__(self, coordinator, budget_id, instance_name, account_id, account_name, currency):
+    def __init__(self, coordinator, account, entry, currency_symbol, instance_name):
+        """Initialize the sensor."""
         super().__init__(coordinator)
-        self.budget_id = budget_id
-        self.instance_name = instance_name
-        self.account_id = account_id
-        self.account_name = account_name
-        self.currency = currency
-
-        self._attr_unique_id = f"ynab_{instance_name}_{budget_id}_{account_id}_account"
+        budget_id = entry.data["budget_id"]
+        self._attr_unique_id = f"ynab_{instance_name}_{account['id']}"  # Use instance_name for unique_id
         self._attr_device_info = {
             "identifiers": {(DOMAIN, f"{budget_id}_accounts")},
-            "name": "YNAB Budget - Accounts",
+            "name": f"YNAB {instance_name} - Accounts",  # Friendly name for device
             "manufacturer": "YNAB",
-            "model": "YNAB Budget"
+            "model": "YNAB Account",
+            "entry_type": "service",
         }
-        self._attr_icon = "mdi:bank"
+        self._attr_name = f"{account['name']} YNAB {instance_name}"  # Friendly name for sensor
+        self._attr_native_unit_of_measurement = currency_symbol
 
-    @property
-    def name(self):
-        return f"YNAB {self.instance_name} {self.account_name} Balance"
+        balance = account.get("balance", 0) or 0
+        cleared_balance = account.get("cleared_balance", 0) or 0
+        uncleared_balance = account.get("uncleared_balance", 0) or 0
 
-    @property
-    def state(self):
-        """Retrieve the latest account balance."""
-        if self.coordinator.data["accounts"]:
-            for account in self.coordinator.data["accounts"]:
-                if account["id"] == self.account_id:
-                    return f"{CURRENCY_SYMBOLS.get(self.currency, '')}{account['balance'] / 1000}"
-        return None
+        self._attr_extra_state_attributes = {
+            "balance": balance / 1000,
+            "cleared_balance": cleared_balance / 1000,
+            "uncleared_balance": uncleared_balance / 1000,
+            "on_budget": account.get("on_budget", False),
+            "type": account.get("type", "Unknown"),
+        }
+        self._attr_native_value = cleared_balance / 1000  # Use Cleared Balance as State
 
+        # Set the appropriate icon based on the account type
+        account_type = account.get("type", "").lower()
+        self._attr_icon = self.get_account_icon(account_type)  # Get the icon based on type
+
+    def get_account_icon(self, account_type: str):
+        """Return the appropriate icon based on the account type."""
+        # Loop through the keys in ACCOUNT_ICONS and check if any part of the account_type matches
+        for key, icon in ACCOUNT_ICONS.items():
+            if key in account_type:  # Check if the account type contains any key in ACCOUNT_ICONS
+                return icon
+        return ACCOUNT_ICONS["default"]  # Default icon if no match is found
 
 class YNABCategorySensor(CoordinatorEntity, SensorEntity):
-    """YNAB Category sensor for Home Assistant."""
+    """YNAB Category Sensor."""
 
-    def __init__(
-        self, coordinator, budget_id, instance_name, category_id, category_name,
-        currency, field, device_name
-    ):
+    def __init__(self, coordinator, category, entry, currency_symbol, instance_name):
+        """Initialize the sensor."""
         super().__init__(coordinator)
-        self.budget_id = budget_id
-        self.instance_name = instance_name
-        self.category_id = category_id
-        self.category_name = category_name
-        self.currency = currency
-        self.field = field
-
-        self._attr_unique_id = f"ynab_{instance_name}_{budget_id}_{category_id}_{field}"
+        budget_id = entry.data["budget_id"]
+        self._attr_unique_id = f"ynab_{instance_name}_{category['id']}"  # Use instance_name for unique_id
         self._attr_device_info = {
-            "identifiers": {(DOMAIN, f"{budget_id}_{field}")},
-            "name": device_name,
+            "identifiers": {(DOMAIN, f"{budget_id}_categories")},
+            "name": f"YNAB {instance_name} - Categories",  # Friendly name for device
             "manufacturer": "YNAB",
-            "model": "YNAB Budget"
+            "model": "YNAB Category",
+            "entry_type": "service",
+        }
+        self._attr_name = f"{category['name']} YNAB {instance_name}"  # Friendly name for sensor
+        self._attr_native_unit_of_measurement = currency_symbol
+
+        category_group = category.get("category_group_name") or category.get("group_name") or "Unknown"
+
+        budgeted = category.get("budgeted", 0) or 0
+        activity = category.get("activity", 0) or 0
+        balance = category.get("balance", 0) or 0
+        goal_target = category.get("goal_target", 0) or 0
+        goal_percentage_complete = category.get("goal_percentage_complete", 0) or 0
+
+        self._attr_extra_state_attributes = {
+            "budgeted": budgeted / 1000,
+            "activity": activity / 1000,
+            "balance": balance / 1000,
+            "category_group": category_group,
+            "goal_type": category.get("goal_type", None),
+            "goal_target": goal_target / 1000,
+            "goal_percentage_complete": goal_percentage_complete,
         }
 
-        # Field-based icons
-        if self.field == "activity":
-            self._attr_icon = "mdi:swap-horizontal"
-        elif self.field == "budgeted":
-            self._attr_icon = "mdi:cash-multiple"
-        elif self.field == "balance":
-            self._attr_icon = "mdi:currency-usd"
-        else:
-            self._attr_icon = "mdi:currency-usd"
+        self._attr_native_value = balance / 1000  # Make "balance" the state value
 
-    @property
-    def name(self):
-        return f"YNAB {self.instance_name} {self.category_name} {self.field.capitalize()}"
+        # Set the appropriate icon based on the category name
+        category_name = category.get("name", "").lower().replace(" ", "_")  # Normalise the category name to match keys
+        self._attr_icon = self.get_category_icon(category_name)
 
-    @property
-    def state(self):
-        """Retrieve category data."""
-        for group in self.coordinator.data["categories"]:
-            for category in group["categories"]:
-                if category["id"] == self.category_id:
-                    return f"{CURRENCY_SYMBOLS.get(self.currency, '')}{category[self.field] / 1000}"
-        return None
-
-
-class YNABCategoryGroupSensor(CoordinatorEntity, SensorEntity):
-    """YNAB Category Group sensor for a single field (assigned/activity/balance)."""
-
-    def __init__(
-        self, coordinator, budget_id, instance_name, group_id, group_name,
-        currency, field, device_name
-    ):
-        super().__init__(coordinator)
-        self.budget_id = budget_id
-        self.instance_name = instance_name
-        self.group_id = group_id
-        self.group_name = group_name
-        self.currency = currency
-        self.field = field
-
-        self._attr_unique_id = f"ynab_{instance_name}_{budget_id}_{group_id}_{field}_group"
-        self._attr_device_info = {
-            "identifiers": {(DOMAIN, f"{budget_id}_category_groups")},
-            "name": "YNAB Budget - Category Groups",
-            "manufacturer": "YNAB",
-            "model": "YNAB Budget"
-        }
-        self._device_name = device_name
-
-        if self.field == "budgeted":
-            self._attr_icon = "mdi:cash-multiple"
-        elif self.field == "activity":
-            self._attr_icon = "mdi:swap-horizontal"
-        elif self.field == "balance":
-            self._attr_icon = "mdi:currency-usd"
-        else:
-            self._attr_icon = "mdi:currency-usd"
-
-    @property
-    def name(self):
-        return f"{self._device_name} - {self.instance_name}"
-
-    @property
-    def state(self):
-        """Compute the total assigned, activity, or balance for the group."""
-        categories = self._get_group_categories()
-        total = sum(cat[self.field] for cat in categories)
-        return f"{CURRENCY_SYMBOLS.get(self.currency, '')}{total / 1000}"
-
-    def _get_group_categories(self):
-        for group in self.coordinator.data["categories"]:
-            if group["id"] == self.group_id:
-                return group["categories"]
-        return []
-
-
-class YNABBudgetSummarySensor(CoordinatorEntity, SensorEntity):
-    """YNAB Entire Budget sensor for a single field (budgeted/activity/balance)."""
-
-    def __init__(
-        self, coordinator, budget_id, instance_name, currency, field, device_name
-    ):
-        super().__init__(coordinator)
-        self.budget_id = budget_id
-        self.instance_name = instance_name
-        self.currency = currency
-        self.field = field
-
-        self._attr_unique_id = f"ynab_{instance_name}_{budget_id}_{field}_budget_summary"
-        self._attr_device_info = {
-            "identifiers": {(DOMAIN, f"{budget_id}_budget_summary_device")},
-            "name": "YNAB Budget - Summary Sensors",
-            "manufacturer": "YNAB",
-            "model": "YNAB Budget Summary"
-        }
-        self._device_name = device_name
-
-        if self.field == "budgeted":
-            self._attr_icon = "mdi:cash-multiple"
-        elif self.field == "activity":
-            self._attr_icon = "mdi:swap-horizontal"
-        elif self.field == "balance":
-            self._attr_icon = "mdi:currency-usd"
-        else:
-            self._attr_icon = "mdi:currency-usd"
-
-    @property
-    def name(self):
-        return f"{self._device_name} - {self.instance_name}"
-
-    @property
-    def state(self):
-        """Sum up the specified field across all categories in this budget."""
-        total = 0
-        for group in self.coordinator.data["categories"]:
-            for category in group["categories"]:
-                total += category[self.field]
-        return f"{CURRENCY_SYMBOLS.get(self.currency, '')}{total / 1000}"
+    def get_category_icon(self, category_name: str):
+        """Return the appropriate icon based on the category name."""
+        # Look for a matching word in the category name that matches the keys in CATEGORY_ICONS
+        for key in CATEGORY_ICONS:
+            if category_name.startswith(key):  # Check if the category name starts with any key in CATEGORY_ICONS
+                return CATEGORY_ICONS[key]
+        return "mdi:currency-usd"  # Default icon if no match is found
