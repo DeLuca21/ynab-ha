@@ -48,15 +48,30 @@ class ConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
         """Handle the initial step to enter an access token."""
         errors = {}
 
+
         if user_input is None:
             return self.async_show_form(
                 step_id="user",
                 data_schema=vol.Schema({
-                    vol.Required(CONF_ACCESS_TOKEN): str
+                    vol.Required(CONF_ACCESS_TOKEN): str,
+                    vol.Required("Accept Terms", default=False): bool  # Checkbox for accepting the terms
                 }),
                 errors=errors
             )
 
+        # Check if terms are accepted, otherwise prompt again
+        if not user_input.get("Accept Terms"):
+            errors["base"] = "Terms not accepted, please accept terms to continue"
+            return self.async_show_form(
+                step_id="user",
+                data_schema=vol.Schema({
+                    vol.Required(CONF_ACCESS_TOKEN): str,
+                    vol.Required("Accept Terms", default=False): bool  # Custom label again for consistency
+                }),
+                errors=errors
+            )
+
+        # If terms are accepted, continue the flow
         try:
             self.access_token = user_input[CONF_ACCESS_TOKEN]
             self.api = YNABApi(self.access_token)
