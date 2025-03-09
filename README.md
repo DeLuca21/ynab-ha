@@ -1,9 +1,13 @@
 # YNAB Integration for Home Assistant
 
-[![HACS Custom](https://img.shields.io/badge/HACS-Custom-orange.svg)](https://hacs.xyz/)  
-![MIT License](https://img.shields.io/badge/License-MIT-blue.svg?style=flat-square)  
-![GitHub Release](https://img.shields.io/github/v/release/DeLuca21/hacs-ynab?include_prereleases)  
-![GitHub Downloads](https://img.shields.io/github/downloads/DeLuca21/hacs-ynab/latest/total)
+[![HACS Custom](https://img.shields.io/badge/HACS-Custom-orange.svg?style=for-the-badge&labelColor=%23585b70&color=%23b4befe)](https://hacs.xyz/)
+![GitHub License](https://img.shields.io/github/license/DeLuca21/hacs-ynab?style=for-the-badge&labelColor=%23585b70&color=%23f5e0dc)
+![GitHub Release](https://img.shields.io/github/v/release/DeLuca21/hacs-ynab?include_prereleases&style=for-the-badge&labelColor=%23585b70&color=%23cba6f7)
+![GitHub Downloads (all assets, all releases)](https://img.shields.io/github/downloads/DeLuca21/hacs-ynab/total?style=for-the-badge&label=Downloads&labelColor=%23585b70&color=%23a6da95)
+![GitHub Issues or Pull Requests](https://img.shields.io/github/issues/DeLuca21/hacs-ynab?style=for-the-badge&labelColor=%23585b70&color=%23eba0ac)
+
+
+
 
 <p align="center">
   <img src="https://raw.githubusercontent.com/DeLuca21/hacs-ynab/refs/heads/main/assets/yanb_logo.png" alt="YNAB Logo" width="300">
