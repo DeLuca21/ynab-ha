@@ -1,10 +1,12 @@
 # YNAB Integration for Home Assistant
 
-[![HACS Custom](https://img.shields.io/badge/HACS-Custom-orange.svg?style=for-the-badge&labelColor=%23585b70&color=%23b4befe)](https://hacs.xyz/)
-![GitHub License](https://img.shields.io/github/license/DeLuca21/hacs-ynab?style=for-the-badge&labelColor=%23585b70&color=%23f5e0dc)
-![GitHub Release](https://img.shields.io/github/v/release/DeLuca21/hacs-ynab?include_prereleases&style=for-the-badge&labelColor=%23585b70&color=%23cba6f7)
-![GitHub Downloads (all assets, all releases)](https://img.shields.io/github/downloads/DeLuca21/hacs-ynab/total?style=for-the-badge&label=Downloads&labelColor=%23585b70&color=%23a6da95)
-![GitHub Issues or Pull Requests](https://img.shields.io/github/issues/DeLuca21/hacs-ynab?style=for-the-badge&labelColor=%23585b70&color=%23eba0ac)
+[![HACS Custom](https://img.shields.io/badge/HACS-Custom-orange.svg?style=for-the-badge&labelColor=%23585b70&color=%23b4befe&logo=home-assistant)](https://hacs.xyz/)
+[![GitHub License](https://img.shields.io/github/license/DeLuca21/hacs-ynab?style=for-the-badge&labelColor=%23585b70&color=%23f5e0dc&logo=github)](https://github.com/DeLuca21/hacs-ynab)
+[![GitHub Release](https://img.shields.io/github/v/release/DeLuca21/hacs-ynab?include_prereleases&style=for-the-badge&labelColor=%23585b70&color=%23cba6f7&logo=github)](https://github.com/DeLuca21/hacs-ynab/releases)
+[![GitHub Downloads (all assets, all releases)](https://img.shields.io/github/downloads/DeLuca21/hacs-ynab/total?style=for-the-badge&label=Downloads&labelColor=%23585b70&color=%23a6da95&logo=github)](https://github.com/DeLuca21/hacs-ynab/releases)
+[![GitHub Clones](https://img.shields.io/badge/dynamic/json?label=Clone&query=count&url=https://gist.githubusercontent.com/DeLuca21/3b1c308a20fd07024b4bdfc7916ca3e2/raw/clone.json&logo=github&style=for-the-badge&labelColor=%23585b70&color=%23a6da95)](https://github.com/MShawon/github-clone-count-badge)
+[![GitHub Issues or Pull Requests](https://img.shields.io/github/issues/DeLuca21/hacs-ynab?style=for-the-badge&labelColor=%23585b70&color=%23eba0ac&logo=github)](https://github.com/DeLuca21/hacs-ynab/issues)
+
 
 
 
