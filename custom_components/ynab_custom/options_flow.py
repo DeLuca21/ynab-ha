@@ -12,7 +12,7 @@ from .const import DOMAIN, CONF_CURRENCY
 _LOGGER = logging.getLogger(__name__)
 
 # Predefined options for the update interval (in minutes)
-POLLING_INTERVAL_OPTIONS = {i: f"{i} minute{'s' if i > 1 else ''}" for i in range(1, 61)}
+POLLING_INTERVAL_OPTIONS = {i: f"{i} minute{'s' if i > 1 else ''}" for i in range(5, 61)}
 
 class YNABOptionsFlowHandler(config_entries.OptionsFlow):
     """Handles the options flow for YNAB Custom integration."""

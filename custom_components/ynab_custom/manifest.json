@@ -1,7 +1,7 @@
 {
   "domain": "ynab_custom",
   "name": "YNAB Integration for Home Assistant",
-  "version": "1.2.0",
+  "version": "1.2.2",
   "documentation": "https://github.com/DeLuca21/hacs-ynab",
   "dependencies": [],
   "codeowners": ["@DeLuca21"],

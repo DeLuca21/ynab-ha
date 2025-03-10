@@ -28,20 +28,20 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
 
     # Sanitize the budget name to avoid issues with special characters or spaces
     sanitized_budget_name = sanitize_budget_name(budget_name)
-
     coordinator = YNABDataUpdateCoordinator(hass, entry, budget_id, sanitized_budget_name)
-    await coordinator.async_config_entry_first_refresh()
+
+    await coordinator.async_config_entry_first_refresh()  # Ensure the first update occurs
+    hass.async_create_task(coordinator.async_refresh())  # 🔹 Manually force an update on startup
 
     if DOMAIN not in hass.data:
         hass.data[DOMAIN] = {}
 
     hass.data[DOMAIN][entry.entry_id] = coordinator
-
     await hass.config_entries.async_forward_entry_setups(entry, ["sensor"])
 
-    _LOGGER.info(f"YNAB Custom integration for {sanitized_budget_name} successfully loaded.")  # Log the sanitized name
-
+    _LOGGER.info(f"YNAB Custom integration for {sanitized_budget_name} successfully loaded.")
     return True
+
 
 async def async_unload_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     """Unload a config entry."""

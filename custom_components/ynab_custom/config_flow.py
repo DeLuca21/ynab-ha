@@ -9,7 +9,7 @@ from homeassistant.const import CONF_ACCESS_TOKEN
 from homeassistant.helpers import config_validation as cv
 from homeassistant.data_entry_flow import FlowResult
 
-from .const import DOMAIN, CONF_SELECTED_ACCOUNTS, CONF_SELECTED_CATEGORIES, CONF_CURRENCY, CONF_SELECTED_BUDGET, CONF_UPDATE_INTERVAL
+from .const import DOMAIN, CONF_SELECTED_ACCOUNTS, CONF_SELECTED_CATEGORIES, CONF_CURRENCY, CONF_SELECTED_BUDGET, CONF_UPDATE_INTERVAL, DEFAULT_UPDATE_INTERVAL
 from .api import YNABApi
 
 _LOGGER = logging.getLogger(__name__)
@@ -29,8 +29,8 @@ CURRENCY_OPTIONS = {
     "NZD": "NZ$ (New Zealand Dollar)",
 }
 
-# Polling interval options (1-60 minutes)
-POLLING_INTERVAL_OPTIONS = {i: f"{i} minute{'s' if i > 1 else ''}" for i in range(1, 61)}
+# Polling interval options (5-60 minutes)
+POLLING_INTERVAL_OPTIONS = {i: f"{i} minute{'s' if i > 1 else ''}" for i in range(5, 61)}
 
 # Function to sanitize the budget name
 def sanitize_budget_name(budget_name: str) -> str:
@@ -145,7 +145,7 @@ class ConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
         selected_accounts = user_input.get(CONF_SELECTED_ACCOUNTS, [SELECT_ALL_OPTION])  # Default to "Select All"
         selected_categories = user_input.get(CONF_SELECTED_CATEGORIES, [SELECT_ALL_OPTION])  # Default to "Select All"
         selected_currency = user_input.get(CONF_CURRENCY, "USD")  # Default currency
-        update_interval = user_input.get(CONF_UPDATE_INTERVAL, 5)  # Default to 5 minutes
+        update_interval = user_input.get(CONF_UPDATE_INTERVAL, DEFAULT_UPDATE_INTERVAL)  # Default to 10 minutes
 
         if user_input:
             self.instance_name = user_input.get("instance_name", self.budget_name)  # Default to raw budget name
@@ -170,11 +170,11 @@ class ConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
         schema = vol.Schema({
             vol.Optional("instance_name", default=self.budget_name): str,  # Default to raw budget name
             vol.Required(CONF_CURRENCY, default="USD"): vol.In(CURRENCY_OPTIONS),  # Default currency
-            vol.Required(CONF_UPDATE_INTERVAL, default=5): vol.In(POLLING_INTERVAL_OPTIONS),
+            vol.Required(CONF_UPDATE_INTERVAL, default=DEFAULT_UPDATE_INTERVAL): vol.In(POLLING_INTERVAL_OPTIONS),
             vol.Required(CONF_SELECTED_ACCOUNTS, default=[SELECT_ALL_OPTION]): cv.multi_select(account_options),
             vol.Required(CONF_SELECTED_CATEGORIES, default=[SELECT_ALL_OPTION]): cv.multi_select(category_options),
         })
-
+        
         return self.async_show_form(
             step_id="config_page",
             data_schema=schema,
@@ -192,9 +192,11 @@ class ConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
                 CONF_CURRENCY: self.selected_currency,  # Store selected currency
                 CONF_SELECTED_ACCOUNTS: self.selected_accounts,
                 CONF_SELECTED_CATEGORIES: self.selected_categories,
-                CONF_UPDATE_INTERVAL: self.update_interval,  # Store the selected update interval
                 "instance_name": self.instance_name,  # Make sure instance_name is added here
             },
+            options={  # Store CONF_UPDATE_INTERVAL in options instead of data
+                CONF_UPDATE_INTERVAL: self.update_interval
+            }
         )
 
 # Define CannotConnect exception

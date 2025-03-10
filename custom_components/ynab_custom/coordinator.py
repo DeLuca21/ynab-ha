@@ -8,11 +8,11 @@ from homeassistant.helpers.update_coordinator import DataUpdateCoordinator
 from homeassistant.config_entries import ConfigEntry
 
 from .api import YNABApi
-from .const import DOMAIN, CONF_SELECTED_ACCOUNTS, CONF_SELECTED_CATEGORIES, CONF_CURRENCY
+from .const import DOMAIN, CONF_SELECTED_ACCOUNTS, CONF_SELECTED_CATEGORIES, CONF_CURRENCY, CONF_UPDATE_INTERVAL
 
 _LOGGER = logging.getLogger(__name__)
 
-DEFAULT_UPDATE_INTERVAL = 5  # Default to 5 minutes if no user selection
+DEFAULT_UPDATE_INTERVAL = 10  # Default to 10 minutes if no user selection
 
 class YNABDataUpdateCoordinator(DataUpdateCoordinator):
     """Class to manage fetching YNAB data from API."""
@@ -28,7 +28,8 @@ class YNABDataUpdateCoordinator(DataUpdateCoordinator):
         self.selected_categories = entry.data.get(CONF_SELECTED_CATEGORIES, [])
         
         # Get the user-defined update interval from the config entry, with a fallback to the default
-        update_interval = entry.data.get("update_interval", DEFAULT_UPDATE_INTERVAL)
+        update_interval = self.entry.options.get(CONF_UPDATE_INTERVAL, DEFAULT_UPDATE_INTERVAL)
+        _LOGGER.debug(f"🔹 YNAB update interval retrieved: {update_interval} minutes")
 
         # Fetch the currency symbol from the config entry or API response
         self.currency_symbol = entry.data.get(CONF_CURRENCY, "$")  # Default to "$" if not found
@@ -45,10 +46,10 @@ class YNABDataUpdateCoordinator(DataUpdateCoordinator):
         return datetime.now().strftime("%Y-%m-01")
 
     async def _async_update_data(self):
-        """Fetch budget details from the API, but only update if necessary."""
+        """Fetch budget details from the API."""
         try:
             _LOGGER.debug("Fetching latest YNAB data...")
-
+    
             # Get current month in YYYY-MM-01 format
             current_month = self.get_current_month()
             _LOGGER.debug(f"Fetching data for budget_id: {self.budget_id} and month: {current_month}")  # Log the current month and budget_id
@@ -57,14 +58,18 @@ class YNABDataUpdateCoordinator(DataUpdateCoordinator):
             budget_data = await self.api.get_budget(self.budget_id)
             accounts = await self.api.get_accounts(self.budget_id)
             categories = await self.api.get_categories(self.budget_id)
-    
+            
             # Fetch the monthly summary using the current month
             monthly_summary = await self.api.get_monthly_summary(self.budget_id, current_month)
+    
+            _LOGGER.debug(f"Accounts Response: {accounts}")
     
             # Filter accounts based on user selection
             budget_data["accounts"] = [
                 a for a in accounts.get("accounts", []) if a["id"] in self.selected_accounts
             ]
+    
+            _LOGGER.debug(f"🔹 Filtered Accounts: {budget_data['accounts']}")
     
             # Filter categories based on user selection
             budget_data["categories"] = [
@@ -76,7 +81,7 @@ class YNABDataUpdateCoordinator(DataUpdateCoordinator):
             budget_data["monthly_summary"] = monthly_summary
     
             return budget_data
-
+    
         except Exception as e:
             _LOGGER.error("Error fetching YNAB data: %s", e)
             return {}

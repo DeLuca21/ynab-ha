@@ -4,11 +4,11 @@
 [![GitHub License](https://img.shields.io/github/license/DeLuca21/hacs-ynab?style=for-the-badge&labelColor=%23585b70&color=%23f5e0dc&logo=github)](https://github.com/DeLuca21/hacs-ynab)
 [![GitHub Release](https://img.shields.io/github/v/release/DeLuca21/hacs-ynab?include_prereleases&style=for-the-badge&labelColor=%23585b70&color=%23cba6f7&logo=github)](https://github.com/DeLuca21/hacs-ynab/releases)
 [![GitHub Downloads (all assets, all releases)](https://img.shields.io/github/downloads/DeLuca21/hacs-ynab/total?style=for-the-badge&label=Downloads&labelColor=%23585b70&color=%23a6da95&logo=github)](https://github.com/DeLuca21/hacs-ynab/releases)
-[![GitHub Clones](https://img.shields.io/badge/dynamic/json?label=Clone&query=count&url=https://gist.githubusercontent.com/DeLuca21/3b1c308a20fd07024b4bdfc7916ca3e2/raw/clone.json&logo=github&style=for-the-badge&labelColor=%23585b70&color=%23a6da95)](https://github.com/MShawon/github-clone-count-badge)
+[![GitHub Clones](https://img.shields.io/badge/dynamic/json?label=Clones&query=count&url=https://gist.githubusercontent.com/DeLuca21/3b1c308a20fd07024b4bdfc7916ca3e2/raw/clone.json&logo=github&style=for-the-badge&labelColor=%23585b70&color=%23a6da95)](https://github.com/MShawon/github-clone-count-badge)
 [![GitHub Issues or Pull Requests](https://img.shields.io/github/issues/DeLuca21/hacs-ynab?style=for-the-badge&labelColor=%23585b70&color=%23eba0ac&logo=github)](https://github.com/DeLuca21/hacs-ynab/issues)
 
 
-
+---
 
 
 <p align="center">
@@ -22,23 +22,18 @@
     <img src="https://ko-fi.com/img/githubbutton_sm.svg" height="35" alt="Support me on Ko-fi" />
   </a>
   <a href="https://buymeacoffee.com/DeLuca21" target="_blank">
-    <img src="https://cdn.buymeacoffee.com/buttons/default-orange.png" alt="Buy Me A Coffee" height="41" width="174">
+    <img src="https://cdn.buymeacoffee.com/buttons/default-red.png" alt="Buy Me A Coffee" height="41" width="174">
   </a>
 </p>
 
 ---
 
-## ⚠️ **Version 1.2.0 (Beta) - Breaking Changes**
+## 🚀 **Version 1.2.2 Update**
 
-This version **restructures all sensors**, meaning your **dashboards, automations, and entity references will need updating**.
+This version **fixes the update interval issue** and ensures YNAB data **refreshes correctly every 10 minutes by default** to prevent excessive API calls and avoid rate limits.
 
-### 🔹 **What Changed?**
-
-- **Category, Account, and Summary Sensors Updated** – Additional attributes added, entity IDs may have changed.
-- **No More Legacy Entities** – The new structure improves clarity and flexibility.
-- **Breaking Change Warning** – Users must **update their dashboards and automations manually**.
-- **Removed Integration "Configure" option, Budget-Wide Summary Sensors, Category Group Summaries and Manual Refresh Service** - These may be reintroduced in a future update.
-- **New setup flow** - More user friendly and added YNAB terms to the setup process, requring acceptance of terms and conditions.
+🔹 What Changed?
+- **Update Interval Fix** – The integration now **updates every 10 minutes** by default but can still be customized in the integration settings.
 
 ---
 
@@ -129,8 +124,8 @@ Each YNAB account now has **one sensor** with relevant attributes instead of mul
 
 #### **Attributes for Accounts:**
 
-- **Balance** (Default state value) – The total balance of the account, including both cleared and uncleared transactions.
-- **Cleared Balance** – The balance of transactions that have been processed and cleared.
+- **Balance** – The total balance of the account, including both cleared and uncleared transactions.
+- **Cleared Balance** (Default state value) – The balance of transactions that have been processed and cleared.
 - **Uncleared Balance** – The balance of pending transactions that have not yet cleared.
 - **On Budget** – Indicates whether the account is included in the budget (`true` for budgeted accounts, `false` for tracking accounts).
 - **Type** – The type of account (e.g., `Checking`, `Credit Card`, `Savings`).
@@ -143,7 +138,7 @@ Each YNAB budget category now has **one sensor** with relevant attributes instea
 
 - **Budgeted** – The amount of money assigned to this category for the current month.
 - **Activity** – The total amount spent in this category during the current month (negative means an expense).
-- **Balance**(Default state value) – The remaining funds available in this category after subtracting activity from budgeted.
+- **Balance** (Default state value) – The remaining funds available in this category after subtracting activity from budgeted.
 - **Category Group** – The parent group this category belongs to (e.g., "Bills," "Groceries").
 - **Goal Type** – The type of goal set for this category (e.g., `Target Balance`, `Monthly Funding`).
 - **Goal Target** – The total amount you aim to allocate or save for this category.
@@ -176,6 +171,22 @@ You can now see the current months summary in  **one sensor** with relevant attr
 
 ---
 
+## 🔄 Recent Updates
+
+### ⚠️ **Version 1.2.0 (Beta) - Breaking Changes**
+
+This version **restructures all sensors**, meaning your **dashboards, automations, and entity references will need updating**.
+
+### 🔹 **What Changed?**
+
+- **Category, Account, and Summary Sensors Updated** – Additional attributes added, entity IDs may have changed.
+- **No More Legacy Entities** – The new structure improves clarity and flexibility.
+- **Breaking Change Warning** – Users must **update their dashboards and automations manually**.
+- **Removed Integration "Configure" option, Budget-Wide Summary Sensors, Category Group Summaries and Manual Refresh Service** - These may be reintroduced in a future update.
+- **New setup flow** - More user friendly and added YNAB terms to the setup process, requring acceptance of terms and conditions.
+
+---
+
 ## 🚀 Future Updates
 
 I'm actively improving the YNAB integration and plan to introduce the following features in future updates:
@@ -195,7 +206,7 @@ I'm actively improving the YNAB integration and plan to introduce the following 
 If you enjoy this integration, consider **supporting development**:
 
 [![Ko-fi](https://ko-fi.com/img/githubbutton_sm.svg)](https://ko-fi.com/DeLuca21)  
-[![BuyMeACoffee](https://cdn.buymeacoffee.com/buttons/default-orange.png)](https://www.buymeacoffee.com/DeLuca21)
+[![BuyMeACoffee](https://cdn.buymeacoffee.com/buttons/default-red.png)](https://www.buymeacoffee.com/DeLuca21)
 
 🚀 **Happy budgeting with Home Assistant!** 🎯
 
