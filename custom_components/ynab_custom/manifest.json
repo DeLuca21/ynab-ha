@@ -1,6 +1,7 @@
 {
   "domain": "ynab_custom",
   "name": "YNAB Integration for Home Assistant",
+  
   "codeowners": ["@DeLuca21"],
   "config_flow": true,
   "dependencies": [],
