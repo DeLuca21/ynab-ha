@@ -32,6 +32,8 @@
 
 This version **fixes a critical issue with currency symbols**, ensuring YNAB sensors correctly display the selected currency instead of defaulting to USD ($).
 
+Additionally, **the integration now displays the YNAB logo and icons in Home Assistant** after submission to the official [Home Assistant Brands repository](https://github.com/home-assistant/brands).
+
 ### 🔥 **Fixes & Changes**
 
 ✅ **Currency Symbol Now Displays Correctly**
@@ -42,6 +44,13 @@ This version **fixes a critical issue with currency symbols**, ensuring YNAB sen
     - **Account Sensors** (YNAB Balances)
     - **Category Sensors** (Budget Categories)
     - **Monthly Summary Sensors** (Spending Activity)
+ 
+✅ **YNAB Logo & Icons Now Appear in Home Assistant**
+
+- This integration was **successfully submitted to the [Home Assistant Brands repository](https://github.com/home-assistant/brands)**, enabling:
+    - **The YNAB logo to appear on the integration page** in Home Assistant.
+    - **The YNAB icon to display next to devices and services** in Home Assistant.
+- This provides **a more polished and recognisable look** when managing YNAB in Home Assistant.
 
 ---
 
