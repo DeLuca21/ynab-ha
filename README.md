@@ -28,12 +28,31 @@
 
 ---
 
-## 🚀 **Version 1.2.2 Update**
+## 🎉 **What's New in v1.2.3?**
 
-This version **fixes the update interval issue** and ensures YNAB data **refreshes correctly every 10 minutes by default** to prevent excessive API calls and avoid rate limits.
+This version **fixes a critical issue with currency symbols**, ensuring YNAB sensors correctly display the selected currency instead of defaulting to USD ($).
 
-🔹 What Changed?
-- **Update Interval Fix** – The integration now **updates every 10 minutes** by default but can still be customized in the integration settings.
+Additionally, **the integration now displays the YNAB logo and icons in Home Assistant** after submission to the official [Home Assistant Brands repository](https://github.com/home-assistant/brands).
+
+---
+
+### 🔥 **Fixes & Changes**
+
+✅ **Currency Symbol Now Displays Correctly**
+
+- Previously, all sensors **defaulted to `$` (USD)** regardless of the currency selected during setup.
+- **Fixed how the selected currency is stored and retrieved** across `config_flow.py`, `coordinator.py`, and `sensor.py`.
+- **Now applies the correct currency symbol (`A$`, `€`, `£`, etc.)** for:
+    - **Account Sensors** (YNAB Balances)
+    - **Category Sensors** (Budget Categories)
+    - **Monthly Summary Sensors** (Spending Activity)
+
+✅ **YNAB Logo & Icons Now Appear in Home Assistant**
+
+- This integration was **successfully submitted to the [Home Assistant Brands repository](https://github.com/home-assistant/brands)**, enabling:
+    - **The YNAB logo to appear on the integration page** in Home Assistant.
+    - **The YNAB icon to display next to services** in Home Assistant.
+- This provides **a more polished and recognisable look** when managing YNAB in Home Assistant.
 
 ---
 
@@ -173,6 +192,14 @@ You can now see the current months summary in  **one sensor** with relevant attr
 
 ## 🔄 Recent Updates
 
+
+## 🚀 **Version 1.2.2 Update**
+
+This version **fixes the update interval issue** and ensures YNAB data **refreshes correctly every 10 minutes by default** to prevent excessive API calls and avoid rate limits.
+### 🔹 **What Changed?**
+
+- **Update Interval Fix** – The integration now **updates every 10 minutes** by default but can still be customized in the integration settings.
+
 ### ⚠️ **Version 1.2.0 (Beta) - Breaking Changes**
 
 This version **restructures all sensors**, meaning your **dashboards, automations, and entity references will need updating**.
@@ -215,4 +242,3 @@ If you enjoy this integration, consider **supporting development**:
 ## Disclaimer
 
 This YNAB for Home Assistant integration is not officially supported by You Need A Budget (YNAB) in any way. Use of this integration is at your own risk. Any issues or errors caused by this integration are not supported through YNAB's official support channels, and YNAB will not be able to troubleshoot or fix any problems related to it. Please use at your own risk!
-

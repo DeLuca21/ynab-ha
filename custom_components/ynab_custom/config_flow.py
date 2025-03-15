@@ -144,7 +144,10 @@ class ConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
 
         selected_accounts = user_input.get(CONF_SELECTED_ACCOUNTS, [SELECT_ALL_OPTION])  # Default to "Select All"
         selected_categories = user_input.get(CONF_SELECTED_CATEGORIES, [SELECT_ALL_OPTION])  # Default to "Select All"
-        selected_currency = user_input.get(CONF_CURRENCY, "USD")  # Default currency
+
+        # Ensure that if a currency was previously selected, it remains selected in UI
+        selected_currency = user_input.get(CONF_CURRENCY, getattr(self, "selected_currency", "USD"))
+
         update_interval = user_input.get(CONF_UPDATE_INTERVAL, DEFAULT_UPDATE_INTERVAL)  # Default to 10 minutes
 
         if user_input:
@@ -169,7 +172,7 @@ class ConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
 
         schema = vol.Schema({
             vol.Optional("instance_name", default=self.budget_name): str,  # Default to raw budget name
-            vol.Required(CONF_CURRENCY, default="USD"): vol.In(CURRENCY_OPTIONS),  # Default currency
+            vol.Required(CONF_CURRENCY, default=self.selected_currency if hasattr(self, "selected_currency") else "USD"): vol.In(CURRENCY_OPTIONS),  # Default currency
             vol.Required(CONF_UPDATE_INTERVAL, default=DEFAULT_UPDATE_INTERVAL): vol.In(POLLING_INTERVAL_OPTIONS),
             vol.Required(CONF_SELECTED_ACCOUNTS, default=[SELECT_ALL_OPTION]): cv.multi_select(account_options),
             vol.Required(CONF_SELECTED_CATEGORIES, default=[SELECT_ALL_OPTION]): cv.multi_select(category_options),
@@ -183,13 +186,16 @@ class ConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
 
     async def async_step_create_entry(self) -> FlowResult:
         """Create the entry with the user data."""
+        currency_to_store = self.selected_currency 
+        _LOGGER.error(f"🔴 DEBUG: Storing selected currency in config entry: {currency_to_store}")
+    
         return self.async_create_entry(
             title=self.instance_name,  # Use the raw instance name (display name)
             data={
                 CONF_ACCESS_TOKEN: self.access_token,
                 "budget_id": self.budget_id,
                 "budget_name": self.budget_name,  # Store the raw budget name
-                CONF_CURRENCY: self.selected_currency,  # Store selected currency
+                CONF_CURRENCY: currency_to_store,  # Store selected currency
                 CONF_SELECTED_ACCOUNTS: self.selected_accounts,
                 CONF_SELECTED_CATEGORIES: self.selected_categories,
                 "instance_name": self.instance_name,  # Make sure instance_name is added here

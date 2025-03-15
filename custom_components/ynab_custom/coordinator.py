@@ -6,9 +6,8 @@ from datetime import timedelta
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers.update_coordinator import DataUpdateCoordinator
 from homeassistant.config_entries import ConfigEntry
-
 from .api import YNABApi
-from .const import DOMAIN, CONF_SELECTED_ACCOUNTS, CONF_SELECTED_CATEGORIES, CONF_CURRENCY, CONF_UPDATE_INTERVAL
+from .const import DOMAIN, CONF_SELECTED_ACCOUNTS, CONF_SELECTED_CATEGORIES, CONF_CURRENCY, CONF_UPDATE_INTERVAL, get_currency_symbol
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -29,10 +28,11 @@ class YNABDataUpdateCoordinator(DataUpdateCoordinator):
         
         # Get the user-defined update interval from the config entry, with a fallback to the default
         update_interval = self.entry.options.get(CONF_UPDATE_INTERVAL, DEFAULT_UPDATE_INTERVAL)
-        _LOGGER.debug(f"🔹 YNAB update interval retrieved: {update_interval} minutes")
 
-        # Fetch the currency symbol from the config entry or API response
-        self.currency_symbol = entry.data.get(CONF_CURRENCY, "$")  # Default to "$" if not found
+        # Fetch the currency symbol from the config entry
+        self.currency_symbol = get_currency_symbol(self.entry.data.get(CONF_CURRENCY, "USD"))  # Convert to correct symbol
+        _LOGGER.error(f"🔴 DEBUG: YNAB Currency Retrieved in Coordinator: {self.currency_symbol}")
+
 
         super().__init__(
             hass,

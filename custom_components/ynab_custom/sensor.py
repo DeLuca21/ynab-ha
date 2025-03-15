@@ -38,8 +38,9 @@ async def async_setup_entry(hass, entry, async_add_entities):
 
     _LOGGER.debug("🔹 Setting up YNAB sensors...")
 
-    selected_currency = entry.data.get(CONF_CURRENCY, "USD")  # Get user-selected currency
-    currency_symbol = get_currency_symbol(selected_currency)  # Convert to symbol
+    # Fetch the currency symbol directly from coordinator
+    currency_symbol = coordinator.currency_symbol
+    _LOGGER.error(f"🔴 DEBUG: Currency set for sensors (from coordinator): {currency_symbol}")  # Confirm currency being passed
 
     entities = []
     raw_budget_name = entry.data["budget_name"]
@@ -80,8 +81,6 @@ async def async_setup_entry(hass, entry, async_add_entities):
     # Add the entity list for the sensors
     async_add_entities(entities)
 
-
-
 class YNABMonthSummarySensor(CoordinatorEntity, SensorEntity):
     """Representation of the YNAB monthly summary sensor."""
 
@@ -109,7 +108,7 @@ class YNABMonthSummarySensor(CoordinatorEntity, SensorEntity):
             "model": "YNAB Extras",
             "entry_type": "service",
         }
-
+        self._attr_native_unit_of_measurement = self.currency_symbol
         _LOGGER.debug(f"Initialized YNABMonthSummarySensor with ID: {self._unique_id}")
 
     async def async_added_to_hass(self):
@@ -205,6 +204,11 @@ class YNABAccountSensor(CoordinatorEntity, SensorEntity):
         return ACCOUNT_ICONS["default"]  # Default icon if no match is found
 
     @property
+    def native_unit_of_measurement(self):
+        """Return the correct currency symbol explicitly for HA to recognize it."""
+        return self.currency_symbol  # Ensure HA correctly applies the currency
+
+    @property
     def native_value(self):
         """Return the state of the sensor (cleared balance)."""
         return self.account.get("cleared_balance", 0) / 1000  # Convert from milliunits
@@ -265,7 +269,7 @@ class YNABCategorySensor(CoordinatorEntity, SensorEntity):
             "entry_type": "service",
         }
         self._attr_name = f"{category['name']} YNAB {instance_name}"  # Friendly name for sensor
-        self._attr_native_unit_of_measurement = currency_symbol
+        self._attr_native_unit_of_measurement = self.currency_symbol
 
         # Set the appropriate icon based on the category name
         category_name = category.get("name", "").lower().replace(" ", "_")  # Normalise the category name to match keys
@@ -278,6 +282,11 @@ class YNABCategorySensor(CoordinatorEntity, SensorEntity):
             if category_name.startswith(key):  # Check if the category name starts with any key in CATEGORY_ICONS
                 return CATEGORY_ICONS[key]
         return "mdi:currency-usd"  # Default icon if no match is found
+
+    @property
+    def native_unit_of_measurement(self):
+        """Return the correct currency symbol explicitly for HA to recognize it."""
+        return self.currency_symbol  # Ensure HA correctly applies the currency
 
     @property
     def native_value(self):
