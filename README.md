@@ -1,21 +1,21 @@
 # YNAB Integration for Home Assistant
 
 [![HACS Custom](https://img.shields.io/badge/HACS-Custom-orange.svg?style=for-the-badge&labelColor=%23585b70&color=%23b4befe&logo=home-assistant)](https://hacs.xyz/)
-[![GitHub License](https://img.shields.io/github/license/DeLuca21/hacs-ynab?style=for-the-badge&labelColor=%23585b70&color=%23f5e0dc&logo=github)](https://github.com/DeLuca21/hacs-ynab)
-[![GitHub Release](https://img.shields.io/github/v/release/DeLuca21/hacs-ynab?include_prereleases&style=for-the-badge&labelColor=%23585b70&color=%23cba6f7&logo=github)](https://github.com/DeLuca21/hacs-ynab/releases)
-[![GitHub Downloads (all assets, all releases)](https://img.shields.io/github/downloads/DeLuca21/hacs-ynab/total?style=for-the-badge&label=Downloads&labelColor=%23585b70&color=%23a6da95&logo=github)](https://github.com/DeLuca21/hacs-ynab/releases)
+[![GitHub License](https://img.shields.io/github/license/DeLuca21/ynab-ha?style=for-the-badge&labelColor=%23585b70&color=%23f5e0dc&logo=github)](https://github.com/DeLuca21/ynab-ha)
+[![GitHub Release](https://img.shields.io/github/v/release/DeLuca21/ynab-ha?include_prereleases&style=for-the-badge&labelColor=%23585b70&color=%23cba6f7&logo=github)](https://github.com/DeLuca21/ynab-ha/releases)
+[![GitHub Downloads (all assets, all releases)](https://img.shields.io/github/downloads/DeLuca21/ynab-ha/total?style=for-the-badge&label=Downloads&labelColor=%23585b70&color=%23a6da95&logo=github)](https://github.com/DeLuca21/ynab-ha/releases)
 [![GitHub Clones](https://img.shields.io/badge/dynamic/json?label=Clones&query=count&url=https://gist.githubusercontent.com/DeLuca21/3b1c308a20fd07024b4bdfc7916ca3e2/raw/clone.json&logo=github&style=for-the-badge&labelColor=%23585b70&color=%23a6da95)](https://github.com/MShawon/github-clone-count-badge)
-[![GitHub Issues or Pull Requests](https://img.shields.io/github/issues/DeLuca21/hacs-ynab?style=for-the-badge&labelColor=%23585b70&color=%23eba0ac&logo=github)](https://github.com/DeLuca21/hacs-ynab/issues)
+[![GitHub Issues or Pull Requests](https://img.shields.io/github/issues/DeLuca21/ynab-ha?style=for-the-badge&labelColor=%23585b70&color=%23eba0ac&logo=github)](https://github.com/DeLuca21/ynab-ha/issues)
 
 
 ---
 
 
 <p align="center">
-  <img src="https://raw.githubusercontent.com/DeLuca21/hacs-ynab/refs/heads/main/assets/yanb_logo.png" alt="YNAB Logo" width="300">
+  <img src="https://raw.githubusercontent.com/DeLuca21/ynab-ha/refs/heads/main/assets/yanb_logo.png" alt="YNAB Logo" width="300">
 </p>
 <p align="center">
-  <img src="https://raw.githubusercontent.com/DeLuca21/hacs-ynab/refs/heads/main/assets/works_with_ynab.svg" alt="Works With YNAB Logo" width="300">
+  <img src="https://raw.githubusercontent.com/DeLuca21/ynab-ha/refs/heads/main/assets/works_with_ynab.svg" alt="Works With YNAB Logo" width="300">
 </p>
 <p align="center">
   <a href="https://ko-fi.com/DeLuca21" target="_blank">
@@ -28,13 +28,9 @@
 
 ---
 
-## 🎉 **What's New in v1.2.3?**
+## 🚀 **Version 1.2.3 Update**
 
 This version **fixes a critical issue with currency symbols**, ensuring YNAB sensors correctly display the selected currency instead of defaulting to USD ($).
-
-Additionally, **the integration now displays the YNAB logo and icons in Home Assistant** after submission to the official [Home Assistant Brands repository](https://github.com/home-assistant/brands).
-
----
 
 ### 🔥 **Fixes & Changes**
 
@@ -46,13 +42,6 @@ Additionally, **the integration now displays the YNAB logo and icons in Home Ass
     - **Account Sensors** (YNAB Balances)
     - **Category Sensors** (Budget Categories)
     - **Monthly Summary Sensors** (Spending Activity)
-
-✅ **YNAB Logo & Icons Now Appear in Home Assistant**
-
-- This integration was **successfully submitted to the [Home Assistant Brands repository](https://github.com/home-assistant/brands)**, enabling:
-    - **The YNAB logo to appear on the integration page** in Home Assistant.
-    - **The YNAB icon to display next to services** in Home Assistant.
-- This provides **a more polished and recognisable look** when managing YNAB in Home Assistant.
 
 ---
 
@@ -77,11 +66,11 @@ You can see the **dashboard card example, setup flow, account details, category 
 <p align="center">
   <table>
     <tr>
-      <td align="center"><img src="https://raw.githubusercontent.com/DeLuca21/hacs-ynab/refs/heads/main/assets/screenshots/dashboard_example.png" alt="Monthly Summary" width="200"></td>
-      <td align="center"><img src="https://raw.githubusercontent.com/DeLuca21/hacs-ynab/refs/heads/main/assets/screenshots/setup_flow.png" alt="Setup Flow" width="200"></td>
-      <td align="center"><img src="https://raw.githubusercontent.com/DeLuca21/hacs-ynab/refs/heads/main/assets/screenshots/account_example.png" alt="Accounts" width="200"></td>
-      <td align="center"><img src="https://raw.githubusercontent.com/DeLuca21/hacs-ynab/refs/heads/main/assets/screenshots/category_example.png" alt="Categories" width="200"></td>
-      <td align="center"><img src="https://raw.githubusercontent.com/DeLuca21/hacs-ynab/refs/heads/main/assets/screenshots/monthly_summary.png" alt="Monthly Summary" width="200"></td>
+      <td align="center"><img src="https://raw.githubusercontent.com/DeLuca21/ynab-ha/refs/heads/main/assets/screenshots/dashboard_example.png" alt="Monthly Summary" width="200"></td>
+      <td align="center"><img src="https://raw.githubusercontent.com/DeLuca21/ynab-ha/refs/heads/main/assets/screenshots/setup_flow.png" alt="Setup Flow" width="200"></td>
+      <td align="center"><img src="https://raw.githubusercontent.com/DeLuca21/ynab-ha/refs/heads/main/assets/screenshots/account_example.png" alt="Accounts" width="200"></td>
+      <td align="center"><img src="https://raw.githubusercontent.com/DeLuca21/ynab-ha/refs/heads/main/assets/screenshots/category_example.png" alt="Categories" width="200"></td>
+      <td align="center"><img src="https://raw.githubusercontent.com/DeLuca21/ynab-ha/refs/heads/main/assets/screenshots/monthly_summary.png" alt="Monthly Summary" width="200"></td>
     </tr>
   </table>
 </p>
@@ -98,7 +87,7 @@ You can see the **dashboard card example, setup flow, account details, category 
 3. Click the **three-dot menu** (⋮) and select **"Custom repositories"**.
 4. Add the repository:
 ```
-https://github.com/DeLuca21/hacs-ynab
+https://github.com/DeLuca21/ynab-ha
 ```
 5. and pick **"Integration"** from the category dropdown.
 6. Click **"ADD"**.
@@ -107,7 +96,7 @@ https://github.com/DeLuca21/hacs-ynab
 
 ### Manual Installation
 
-1. Download the latest release from the [GitHub repository](https://github.com/DeLuca21/hacs-ynab/releases).
+1. Download the latest release from the [GitHub repository](https://github.com/DeLuca21/ynab-ha/releases).
 2. Unzip the downloaded file and place the `ynab_custom` folder inside your `custom_components` directory (e.g., `/config/custom_components/ynab_custom`).
 3. **Restart Home Assistant**.
 
@@ -184,7 +173,7 @@ You can now see the current months summary in  **one sensor** with relevant attr
 
 ## 🛠 Issues & Support
 
-- Found a bug? Report it via [GitHub Issues](https://github.com/DeLuca21/hacs-ynab/issues).
+- Found a bug? Report it via [GitHub Issues](https://github.com/DeLuca21/ynab-ha/issues).
 - Have a feature request? Feel free to suggest improvements.
 - Pull requests are welcome!
 

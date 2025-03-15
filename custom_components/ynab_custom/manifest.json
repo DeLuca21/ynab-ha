@@ -5,9 +5,9 @@
   "codeowners": ["@DeLuca21"],
   "config_flow": true,
   "dependencies": [],
-  "documentation": "https://github.com/DeLuca21/hacs-ynab",
+  "documentation": "https://github.com/DeLuca21/ynab-ha",
   "iot_class": "cloud_polling",
-  "issue_tracker": "https://github.com/DeLuca21/hacs-ynab/issues",
+  "issue_tracker": "https://github.com/DeLuca21/ynab-ha/issues",
   "requirements": ["aiohttp"],
   "version": "1.2.3"
 }
