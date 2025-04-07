@@ -1,8 +1,7 @@
 """YNAB Data Update Coordinator."""
 
 import logging
-from datetime import datetime
-from datetime import timedelta
+from datetime import datetime, timedelta
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers.update_coordinator import DataUpdateCoordinator
 from homeassistant.config_entries import ConfigEntry
@@ -31,7 +30,7 @@ class YNABDataUpdateCoordinator(DataUpdateCoordinator):
 
         # Fetch the currency symbol from the config entry
         self.currency_symbol = get_currency_symbol(self.entry.data.get(CONF_CURRENCY, "USD"))  # Convert to correct symbol
-        _LOGGER.error(f"🔴 DEBUG: YNAB Currency Retrieved in Coordinator: {self.currency_symbol}")
+        _LOGGER.debug(f"🔴 DEBUG: YNAB Currency Retrieved in Coordinator: {self.currency_symbol}")
 
 
         super().__init__(
@@ -62,6 +61,10 @@ class YNABDataUpdateCoordinator(DataUpdateCoordinator):
             # Fetch the monthly summary using the current month
             monthly_summary = await self.api.get_monthly_summary(self.budget_id, current_month)
     
+
+            # Update last successful poll timestamp
+            self.last_successful_poll = datetime.now().strftime("%B %d, %Y - %I:%M %p")
+            _LOGGER.debug(f"🔹 Last Successful API Poll: {self.last_successful_poll}")
             _LOGGER.debug(f"Accounts Response: {accounts}")
     
             # Filter accounts based on user selection
@@ -79,12 +82,15 @@ class YNABDataUpdateCoordinator(DataUpdateCoordinator):
     
             # Store the monthly summary data
             budget_data["monthly_summary"] = monthly_summary
+
+            # Store Last Successful Poll in self.data
+            budget_data["last_successful_poll"] = self.last_successful_poll
     
             return budget_data
     
         except Exception as e:
             _LOGGER.error("Error fetching YNAB data: %s", e)
-            return {}
+            return self.data  # Keep previous data to avoid resetting sensors
 
     async def manual_refresh(self, call):
         """Manually refresh YNAB data when the service is called."""

@@ -8,6 +8,7 @@ from homeassistant.core import callback
 from .coordinator import YNABDataUpdateCoordinator
 from .const import DOMAIN
 from .icons import CATEGORY_ICONS, ACCOUNT_ICONS
+from homeassistant.helpers.entity import EntityCategory
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -60,7 +61,11 @@ async def async_setup_entry(hass, entry, async_add_entities):
         _LOGGER.error(f"🚨 No 'month' data found in response for {current_month}. Full response: {monthly_summary}")
         return
 
-    entities.append(YNABMonthSummarySensor(coordinator, monthly_summary, currency_symbol, raw_budget_name))
+
+    entities.append(YNABExtrasSensor(coordinator, monthly_summary, currency_symbol, raw_budget_name))
+
+    # Ensure diagnostics sensors are always added
+    entities.append(YNABLastSuccessfulPollSensor(coordinator, raw_budget_name))
 
     _LOGGER.debug(f"🔹 Coordinator Accounts Data: {coordinator.data.get('accounts', [])}")
 
@@ -76,40 +81,38 @@ async def async_setup_entry(hass, entry, async_add_entities):
             _LOGGER.debug(f"🔹 Adding Category Sensor: {category}")
             entities.append(YNABCategorySensor(coordinator, category, entry, currency_symbol, raw_budget_name))
 
-    _LOGGER.debug(f"🔹 Total Sensors to Add: {len(entities)}")
-
     # Add the entity list for the sensors
     async_add_entities(entities)
 
-class YNABMonthSummarySensor(CoordinatorEntity, SensorEntity):
-    """Representation of the YNAB monthly summary sensor."""
+class YNABExtrasSensor(CoordinatorEntity, SensorEntity):
+    """Representation of the YNAB Extras sensor (combining Monthly Budget & Diagnostics as separate sensors)."""
 
     def __init__(self, coordinator: YNABDataUpdateCoordinator, monthly_summary, currency_symbol, instance_name):
         """Initialize the sensor."""
         super().__init__(coordinator)
         self.coordinator = coordinator
         self.monthly_summary = monthly_summary
-        self.currency_symbol = currency_symbol  # Now passing currency_symbol from the config flow
+        self.currency_symbol = currency_symbol
         self.instance_name = instance_name
         self._state = None
         # Updated name format
-        self._name = f"Latest Monthly Summary {self.instance_name}"
-        self._unique_id = f"ynab_{self.coordinator.entry.entry_id}_monthly_summary"
+        self._name = f"Latest Month Summary YNAB {self.instance_name}"
+        self._unique_id = f"latest_month_summary_ynab_{self.coordinator.entry.entry_id}"
         self._attr_extra_state_attributes = {}
 
         # Set default icon for the sensor
         self._attr_icon = "mdi:calendar-month"
 
-        # Define the unique ID for the device (monthly summary will be a separate device)
+        # Define as an Extras device
         self._attr_device_info = {
-            "identifiers": {(DOMAIN, f"{self.coordinator.entry.entry_id}_extras")},  # Generic device name
-            "name": f"YNAB {self.instance_name} - Extras",  # Name the device/service as "YNAB <instance_name> - Extras"
+            "identifiers": {(DOMAIN, f"{self.coordinator.entry.entry_id}_extras")},
+            "name": f"YNAB {self.instance_name} - Extras",
             "manufacturer": "YNAB",
             "model": "YNAB Extras",
             "entry_type": "service",
         }
         self._attr_native_unit_of_measurement = self.currency_symbol
-        _LOGGER.debug(f"Initialized YNABMonthSummarySensor with ID: {self._unique_id}")
+        _LOGGER.debug(f"Initialized YNABExtrasSensor with ID: {self._unique_id}")
 
     async def async_added_to_hass(self):
         """Call when entity is added to hass."""
@@ -118,17 +121,17 @@ class YNABMonthSummarySensor(CoordinatorEntity, SensorEntity):
         self.update_attributes()
 
     def update_attributes(self):
-        """Update attributes from coordinator data."""
-        if self.monthly_summary and 'month' in self.monthly_summary:
-            month_data = self.monthly_summary.get('month', {})
+        """Update attributes for Sensors."""
+        if self.monthly_summary and "month" in self.monthly_summary:
+            month_data = self.monthly_summary.get("month", {})
             if month_data:
                 # Set the state as the activity (default to activity if not found)
-                self._state = month_data.get('activity', 0) / 1000  # Default to 0 if activity is missing
+                self._state = month_data.get("activity", 0) / 1000  # Default to 0 if activity is missing
                 self._attr_extra_state_attributes = {
-                    "budgeted": month_data.get('budgeted', 0) / 1000,
-                    "activity": month_data.get('activity', 0) / 1000,
-                    "to_be_budgeted": month_data.get('to_be_budgeted', 0) / 1000,
-                    "age_of_money": month_data.get('age_of_money', 0),
+                    "Budgeted": month_data.get("budgeted", 0) / 1000,
+                    "Activity": month_data.get("activity", 0) / 1000,
+                    "To Be Budgeted": month_data.get("to_be_budgeted", 0) / 1000,
+                    "Age of Money": month_data.get("age_of_money", 0),
                 }
             else:
                 _LOGGER.error(f"Failed to retrieve valid month data for {self.instance_name}")
@@ -153,7 +156,7 @@ class YNABMonthSummarySensor(CoordinatorEntity, SensorEntity):
 
     @property
     def extra_state_attributes(self):
-        """Return additional state attributes."""
+        """Return structured attributes with proper formatting."""
         return self._attr_extra_state_attributes
 
     @property
@@ -166,6 +169,33 @@ class YNABMonthSummarySensor(CoordinatorEntity, SensorEntity):
         """Return the icon for the sensor."""
         return self._attr_icon  # Return the default icon for the monthly summary sensor
 
+class YNABLastSuccessfulPollSensor(CoordinatorEntity, SensorEntity):
+    """Sensor to track the last successful API poll timestamp."""
+
+    def __init__(self, coordinator, instance_name):
+        """Initialize the sensor."""
+        super().__init__(coordinator)
+        self.instance_name = instance_name
+        self._attr_name = f"Last Successful Poll YNAB {self.instance_name}"
+        self._attr_unique_id = f"last_successful_poll_ynab_{self.coordinator.entry.entry_id}"
+        self._attr_icon = "mdi:clock-check-outline"
+        
+        # FIX: Assign to the "Extras" device
+        self._attr_device_info = {
+            "identifiers": {(DOMAIN, f"{coordinator.entry.entry_id}_extras")},
+            "name": f"YNAB {self.instance_name} - Extras",
+            "manufacturer": "YNAB",
+            "model": "YNAB Extras",
+            "entry_type": "service",
+        }
+
+        # FIX: Assign to the Diagnostic Category
+        self._attr_entity_category = EntityCategory.DIAGNOSTIC
+
+    @property
+    def native_value(self):
+        """Return the timestamp of the last successful poll."""
+        return self.coordinator.data.get("last_successful_poll", "Never")
 
 class YNABAccountSensor(CoordinatorEntity, SensorEntity):
     """YNAB Account Sensor."""
