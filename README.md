@@ -51,26 +51,6 @@ This release includes **an important visibility fix for HACS users outside Austr
 
 ---
 
-### 🔥 **Fixes & Changes**
-
-✅ **Currency Symbol Now Displays Correctly**
-
-- Previously, all sensors **defaulted to `$` (USD)** regardless of the currency selected during setup.
-- **Fixed how the selected currency is stored and retrieved** across `config_flow.py`, `coordinator.py`, and `sensor.py`.
-- **Now applies the correct currency symbol (`A$`, `€`, `£`, etc.)** for:
-    - **Account Sensors** (YNAB Balances)
-    - **Category Sensors** (Budget Categories)
-    - **Monthly Summary Sensors** (Spending Activity)
-
-✅ **YNAB Logo & Icons Now Appear in Home Assistant**
-
-- This integration was **successfully submitted to the [Home Assistant Brands repository](https://github.com/home-assistant/brands)**, enabling:
-    - **The YNAB logo to appear on the integration page** in Home Assistant.
-    - **The YNAB icon to display next to services** in Home Assistant.
-- This provides **a more polished and recognisable look** when managing YNAB in Home Assistant.
-
----
-
 ## 🚀 Features
 
 - **Multiple Budgets**: Configure multiple YNAB budgets.
