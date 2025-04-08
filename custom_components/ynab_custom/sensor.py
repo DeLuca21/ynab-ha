@@ -61,7 +61,7 @@ async def async_setup_entry(hass, entry, async_add_entities):
         _LOGGER.error(f"🚨 No 'month' data found in response for {current_month}. Full response: {monthly_summary}")
         return
 
-
+    # Use new class name
     entities.append(YNABExtrasSensor(coordinator, monthly_summary, currency_symbol, raw_budget_name))
 
     # Ensure diagnostics sensors are always added
@@ -127,6 +127,8 @@ class YNABExtrasSensor(CoordinatorEntity, SensorEntity):
             if month_data:
                 # Set the state as the activity (default to activity if not found)
                 self._state = month_data.get("activity", 0) / 1000  # Default to 0 if activity is missing
+
+                # Fix attribute formatting (keep proper case)
                 self._attr_extra_state_attributes = {
                     "Budgeted": month_data.get("budgeted", 0) / 1000,
                     "Activity": month_data.get("activity", 0) / 1000,

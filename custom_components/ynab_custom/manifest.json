@@ -9,5 +9,5 @@
   "iot_class": "cloud_polling",
   "issue_tracker": "https://github.com/DeLuca21/ynab-ha/issues",
   "requirements": ["aiohttp"],
-  "version": "1.2.4"
+  "version": "1.2.5"
 }

@@ -28,11 +28,28 @@
 
 ---
 
-## 🚀 **Version 1.2.3 Update**
+## 🎉 **What's New in v1.2.5?**
 
-This version **fixes a critical issue with currency symbols**, ensuring YNAB sensors correctly display the selected currency instead of defaulting to USD ($).
+This release includes **an important visibility fix for HACS users outside Australia**, as well as a **new diagnostic sensor** to help monitor integration health.
 
-Additionally, **the integration now displays the YNAB logo and icons in Home Assistant** after submission to the official [Home Assistant Brands repository](https://github.com/home-assistant/brands).
+---
+
+### 🔥 **Fixes & Changes**
+
+✅ **Integration Now Visible Globally in HACS**
+
+- Previously, the integration’s `hacs.json` included `"country": "AU"`, which **limited its visibility to Australian users only**.    
+- This line has been **removed**, making the integration **available to all users worldwide** in the HACS store.    
+- If you couldn’t see the integration before — you should now!    
+
+✅ **New Diagnostic Sensor: Last Successful API Poll**
+
+- Added a helpful new sensor: `sensor.ynab_last_successful_poll`    
+- This sensor tracks the **timestamp of the last successful API update**.
+- Useful for **troubleshooting connectivity issues** or monitoring sync reliability.
+- The sensor is included under the **"Extras" device** in Home Assistant.
+
+---
 
 ### 🔥 **Fixes & Changes**
 
@@ -44,12 +61,12 @@ Additionally, **the integration now displays the YNAB logo and icons in Home Ass
     - **Account Sensors** (YNAB Balances)
     - **Category Sensors** (Budget Categories)
     - **Monthly Summary Sensors** (Spending Activity)
- 
+
 ✅ **YNAB Logo & Icons Now Appear in Home Assistant**
 
 - This integration was **successfully submitted to the [Home Assistant Brands repository](https://github.com/home-assistant/brands)**, enabling:
     - **The YNAB logo to appear on the integration page** in Home Assistant.
-    - **The YNAB icon to display next to devices and services** in Home Assistant.
+    - **The YNAB icon to display next to services** in Home Assistant.
 - This provides **a more polished and recognisable look** when managing YNAB in Home Assistant.
 
 ---
@@ -191,6 +208,19 @@ You can now see the current months summary in  **one sensor** with relevant attr
 ## 🔄 Recent Updates
 
 
+## 🚀 **Version 1.2.3 Update**
+
+This version **fixes a critical issue with currency symbols**, ensuring YNAB sensors correctly display the selected currency instead of defaulting to USD ($).
+
+Additionally, **the integration now displays the YNAB logo and icons in Home Assistant** after submission to the official [Home Assistant Brands repository](https://github.com/home-assistant/brands).
+
+### 🔹 **What Changed?**
+
+- **Currency Symbol Fix** – Sensors now show the selected currency (e.g., A$, €, £) instead of always showing $.
+- **Branding Added** – Icons and logos are now correctly shown in Home Assistant.    
+
+---
+
 ## 🚀 **Version 1.2.2 Update**
 
 This version **fixes the update interval issue** and ensures YNAB data **refreshes correctly every 10 minutes by default** to prevent excessive API calls and avoid rate limits.
@@ -198,17 +228,6 @@ This version **fixes the update interval issue** and ensures YNAB data **refresh
 
 - **Update Interval Fix** – The integration now **updates every 10 minutes** by default but can still be customized in the integration settings.
 
-### ⚠️ **Version 1.2.0 (Beta) - Breaking Changes**
-
-This version **restructures all sensors**, meaning your **dashboards, automations, and entity references will need updating**.
-
-### 🔹 **What Changed?**
-
-- **Category, Account, and Summary Sensors Updated** – Additional attributes added, entity IDs may have changed.
-- **No More Legacy Entities** – The new structure improves clarity and flexibility.
-- **Breaking Change Warning** – Users must **update their dashboards and automations manually**.
-- **Removed Integration "Configure" option, Budget-Wide Summary Sensors, Category Group Summaries and Manual Refresh Service** - These may be reintroduced in a future update.
-- **New setup flow** - More user friendly and added YNAB terms to the setup process, requring acceptance of terms and conditions.
 
 ---
 
