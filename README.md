@@ -28,26 +28,19 @@
 
 ---
 
-## 🎉 **What's New in v1.2.5?**
+##  What's New in v1.3.0?
 
-This release includes **an important visibility fix for HACS users outside Australia**, as well as a **new diagnostic sensor** to help monitor integration health.
 
----
+Four new **Category**‑sensor attributes for cleaner dashboards—no extra templates needed!
 
-### 🔥 **Fixes & Changes**
+| Attribute           | What it does                                                             |
+| ------------------- | ------------------------------------------------------------------------ |
+| `percentage_spent`  | % of this month’s budget already spent (0 % when nothing budgeted).      |
+| `needs_attention`   | **true / false** flag if the category is Overspent *or* Under‑funded.    |
+| `attention_reason`  | `"Overspent"`, `"Underfunded"`, or `"Ok"` so you know why.               |
+| `goal_overall_left` | Money still required to hit the goal target, converted to your currency. |
 
-✅ **Integration Now Visible Globally in HACS**
-
-- Previously, the integration’s `hacs.json` included `"country": "AU"`, which **limited its visibility to Australian users only**.    
-- This line has been **removed**, making the integration **available to all users worldwide** in the HACS store.    
-- If you couldn’t see the integration before — you should now!    
-
-✅ **New Diagnostic Sensor: Last Successful API Poll**
-
-- Added a helpful new sensor: `sensor.ynab_last_successful_poll`    
-- This sensor tracks the **timestamp of the last successful API update**.
-- Useful for **troubleshooting connectivity issues** or monitoring sync reliability.
-- The sensor is included under the **"Extras" device** in Home Assistant.
+These are calculated inside the integration—no extra API calls, no new entities.
 
 ---
 
@@ -157,6 +150,10 @@ Each YNAB budget category now has **one sensor** with relevant attributes instea
 - **Goal Type** – The type of goal set for this category (e.g., `Target Balance`, `Monthly Funding`).
 - **Goal Target** – The total amount you aim to allocate or save for this category.
 - **Goal Percentage Complete** – The percentage of progress toward the goal, based on the balance and target.
+- **Goal Overall Left** – Remaining amount needed to meet the goal target.
+- **Percentage Spent** – How much of the current month’s budget has been spent (0 – 100 %+).
+- **Needs Attention** – `true` if the category is overspent or under‑funded.
+- **Attention Reason** – `"Overspent"`, `"Underfunded"`, or `"Ok"`.
 
 ### **Latest Monthly Summary**
 
@@ -168,12 +165,6 @@ You can now see the current months summary in  **one sensor** with relevant attr
 - **Activity** – (Default state value) The total amount spent for the current month.
 - **To Be Budgeted** – The remaining funds available to be assigned for the current month.
 - **Age Of Money** – The average age of your money, indicating financial stability.
-
-## 🔄 Post-Update Steps (Due to Breaking Changes)
-
-- **Check your Lovelace dashboards** – Existing YNAB entities **will need to be re-added**.
-- **Update automations & scripts** – **Entity IDs have changed**, requiring updates.
-- **Review new attributes** – More data is now available in category and account sensors.
 
 ---
 
@@ -188,7 +179,13 @@ You can now see the current months summary in  **one sensor** with relevant attr
 ## 🔄 Recent Updates
 
 
-## 🚀 **Version 1.2.3 Update**
+## 🎉 Version 1.2.5 Update
+
+This release includes **an important visibility fix for HACS users outside Australia**, as well as a **new diagnostic sensor** to help monitor integration health.
+
+---
+
+## 🚀 Version 1.2.3 Update
 
 This version **fixes a critical issue with currency symbols**, ensuring YNAB sensors correctly display the selected currency instead of defaulting to USD ($).
 
@@ -198,15 +195,6 @@ Additionally, **the integration now displays the YNAB logo and icons in Home Ass
 
 - **Currency Symbol Fix** – Sensors now show the selected currency (e.g., A$, €, £) instead of always showing $.
 - **Branding Added** – Icons and logos are now correctly shown in Home Assistant.    
-
----
-
-## 🚀 **Version 1.2.2 Update**
-
-This version **fixes the update interval issue** and ensures YNAB data **refreshes correctly every 10 minutes by default** to prevent excessive API calls and avoid rate limits.
-### 🔹 **What Changed?**
-
-- **Update Interval Fix** – The integration now **updates every 10 minutes** by default but can still be customized in the integration settings.
 
 
 ---

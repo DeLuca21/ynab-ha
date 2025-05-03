@@ -329,13 +329,37 @@ class YNABCategorySensor(CoordinatorEntity, SensorEntity):
     def extra_state_attributes(self):
         """Return additional state attributes."""
         return {
-            "budgeted": self.category.get("budgeted", 0) / 1000,
-            "activity": self.category.get("activity", 0) / 1000,
-            "balance": self.category.get("balance", 0) / 1000,
+            "budgeted": (self.category.get("budgeted") or 0) / 1000,
+            "activity": (self.category.get("activity") or 0) / 1000,
+            "balance":  (self.category.get("balance")  or 0) / 1000,
             "category_group": self.category.get("category_group_name") or self.category.get("group_name", "Unknown"),
             "goal_type": self.category.get("goal_type", None),
-            "goal_target": self.category.get("goal_target", 0) / 1000,
+            "goal_target": (self.category.get("goal_target") or 0) / 1000,
             "goal_percentage_complete": self.category.get("goal_percentage_complete", 0),
+            "goal_overall_left": (self.category.get("goal_overall_left") or 0) / 1000,
+            "percentage_spent": (
+                round(
+                    abs(self.category.get("activity", 0)) /
+                    abs(self.category.get("budgeted", 1)) * 100,
+                    2
+                )
+                if self.category.get("budgeted", 0) else 0.0
+            ),
+            "needs_attention": (
+                self.category.get("balance", 0) < 0 or
+                (
+                    self.category.get("goal_target", 0) > 0 and
+                    self.category.get("goal_overall_left", 0) > 0
+                )
+            ),
+            "attention_reason": (
+                "Overspent" if self.category.get("balance", 0) < 0 else
+                "Underfunded" if (
+                    self.category.get("goal_target", 0) > 0 and
+                    self.category.get("goal_overall_left", 0) > 0
+                ) else
+                "Ok"
+            ),
         }
 
     async def async_added_to_hass(self):
