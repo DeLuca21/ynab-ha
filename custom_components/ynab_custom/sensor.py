@@ -300,7 +300,11 @@ class YNABCategorySensor(CoordinatorEntity, SensorEntity):
             "model": "YNAB Category",
             "entry_type": "service",
         }
-        self._attr_name = f"{category['name']} YNAB {instance_name}"  # Friendly name for sensor
+        name = category["name"]  # Friendly name for sensor
+        if category.get("hidden"):
+            name += " (Hidden)"
+        self._attr_name = f"{name} YNAB {instance_name}"
+
         self._attr_native_unit_of_measurement = self.currency_symbol
 
         # Set the appropriate icon based on the category name
@@ -360,6 +364,7 @@ class YNABCategorySensor(CoordinatorEntity, SensorEntity):
                 ) else
                 "Ok"
             ),
+            "hidden": self.category.get("hidden", False),
         }
 
     async def async_added_to_hass(self):

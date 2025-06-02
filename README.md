@@ -1,6 +1,6 @@
 # YNAB Integration for Home Assistant
 
-[![HACS Custom](https://img.shields.io/badge/HACS-Custom-orange.svg?style=for-the-badge&labelColor=%23585b70&color=%23b4befe&logo=home-assistant)](https://hacs.xyz/)
+[![HACS Default](https://img.shields.io/badge/HACS-Default-orange.svg?style=for-the-badge&labelColor=%23585b70&color=%23b4befe&logo=home-assistant)](https://hacs.xyz/)
 [![GitHub License](https://img.shields.io/github/license/DeLuca21/ynab-ha?style=for-the-badge&labelColor=%23585b70&color=%23f5e0dc&logo=github)](https://github.com/DeLuca21/ynab-ha)
 [![GitHub Release](https://img.shields.io/github/v/release/DeLuca21/ynab-ha?include_prereleases&style=for-the-badge&labelColor=%23585b70&color=%23cba6f7&logo=github)](https://github.com/DeLuca21/ynab-ha/releases)
 [![GitHub Downloads (all assets, all releases)](https://img.shields.io/github/downloads/DeLuca21/ynab-ha/total?style=for-the-badge&label=Downloads&labelColor=%23585b70&color=%23a6da95&logo=github)](https://github.com/DeLuca21/ynab-ha/releases)
@@ -28,19 +28,15 @@
 
 ---
 
-##  What's New in v1.3.0?
+##  What's New in v1.3.1?
 
 
-Four new **Category**‑sensor attributes for cleaner dashboards—no extra templates needed!
 
-| Attribute           | What it does                                                             |
-| ------------------- | ------------------------------------------------------------------------ |
-| `percentage_spent`  | % of this month’s budget already spent (0 % when nothing budgeted).      |
-| `needs_attention`   | **true / false** flag if the category is Overspent *or* Under‑funded.    |
-| `attention_reason`  | `"Overspent"`, `"Underfunded"`, or `"Ok"` so you know why.               |
-| `goal_overall_left` | Money still required to hit the goal target, converted to your currency. |
+This version introduces smarter handling of **hidden categories**, improving dashboard clarity:
 
-These are calculated inside the integration—no extra API calls, no new entities.
+- Hidden YNAB categories now include a `hidden: true` attribute.
+- Sensor names auto-append `(Hidden)` if the category is hidden in YNAB.
+- This makes it easy to exclude legacy or unused categories using templates.
 
 ---
 
@@ -179,22 +175,19 @@ You can now see the current months summary in  **one sensor** with relevant attr
 ## 🔄 Recent Updates
 
 
-## 🎉 Version 1.2.5 Update
+## 🎉 Version 1.3.0 Update
 
-This release includes **an important visibility fix for HACS users outside Australia**, as well as a **new diagnostic sensor** to help monitor integration health.
 
----
+Four new **Category**‑sensor attributes for cleaner dashboards—no extra templates needed!
 
-## 🚀 Version 1.2.3 Update
+| Attribute           | What it does                                                             |
+| ------------------- | ------------------------------------------------------------------------ |
+| `percentage_spent`  | % of this month’s budget already spent (0 % when nothing budgeted).      |
+| `needs_attention`   | **true / false** flag if the category is Overspent *or* Under‑funded.    |
+| `attention_reason`  | `"Overspent"`, `"Underfunded"`, or `"Ok"` so you know why.               |
+| `goal_overall_left` | Money still required to hit the goal target, converted to your currency. |
 
-This version **fixes a critical issue with currency symbols**, ensuring YNAB sensors correctly display the selected currency instead of defaulting to USD ($).
-
-Additionally, **the integration now displays the YNAB logo and icons in Home Assistant** after submission to the official [Home Assistant Brands repository](https://github.com/home-assistant/brands).
-
-### 🔹 **What Changed?**
-
-- **Currency Symbol Fix** – Sensors now show the selected currency (e.g., A$, €, £) instead of always showing $.
-- **Branding Added** – Icons and logos are now correctly shown in Home Assistant.    
+These are calculated inside the integration—no extra API calls, no new entities.  
 
 
 ---
@@ -210,6 +203,8 @@ I'm actively improving the YNAB integration and plan to introduce the following 
 - **Manual Refresh Service** (`ynab_custom.refresh`): Not present in this release but may return in a future update.
 
 - **Integration "Configure" option** - This may be reintroduced in a future update.
+
+- **Optional Exclusion of Hidden Categories** – Considering a toggle in the config flow to exclude hidden categories from being created as sensors, for cleaner dashboards.
 
 ---
 
