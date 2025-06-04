@@ -28,15 +28,16 @@
 
 ---
 
-##  What's New in v1.3.1?
+##  What’s New in v1.4.0?
 
+This update adds four powerful new attributes (found in the Monthly Summary sensor under the Extras device) to help you catch issues early and keep your budget clean:
 
+- `unapproved_transactions` -	Number of transactions that haven’t been approved this month
+- `uncleared_transactions` -	Count of “uncleared” transactions from selected active accounts
+- `overspent_categories` -	Number of categories currently in the red (negative balance)
+- `needs_attention_count` -	Combined count of the above three flags (range: 0–3)
 
-This version introduces smarter handling of **hidden categories**, improving dashboard clarity:
-
-- Hidden YNAB categories now include a `hidden: true` attribute.
-- Sensor names auto-append `(Hidden)` if the category is hidden in YNAB.
-- This makes it easy to exclude legacy or unused categories using templates.
+Use these attributes to build **“attention-needed” cards or alerts** in your dashboard — no extra templates or helpers needed.
 
 ---
 
@@ -78,16 +79,11 @@ You can see the **dashboard card example, setup flow, account details, category 
 ### HACS (Home Assistant Community Store)
 
 1. **Ensure HACS is installed.** If you haven’t yet installed HACS, follow the [HACS installation guide](https://hacs.xyz/docs/installation/manual).
-2. Open **HACS** in Home Assistant.
-3. Click the **three-dot menu** (⋮) and select **"Custom repositories"**.
-4. Add the repository:
-```
-https://github.com/DeLuca21/ynab-ha
-```
-5. and pick **"Integration"** from the category dropdown.
-6. Click **"ADD"**.
-7. Search for **"YNAB Custom"** in HACS and install the integration.
-8. **Restart Home Assistant** to finalize the installation.
+2. In Home Assistant, open **HACS** from the sidebar.
+3. Click on the **search bar** at the top.
+4. Type “**YNAB Integration for Home Assistant**” and select it.
+5. Click **Install**.
+6. **Restart Home Assistant** to finalize the installation.
 
 ### Manual Installation
 
@@ -119,11 +115,11 @@ https://github.com/DeLuca21/ynab-ha
 
 ## 📊 Sensors Created
 
-YNAB data is now represented with **fewer sensors** but **richer attributes**.
+YNAB data is represented using **compact, attribute-rich sensors** — each account, category, and summary uses a single sensor packed with all relevant details.
 
 ### **Accounts**
 
-Each YNAB account now has **one sensor** with relevant attributes instead of multiple sensors.
+Each YNAB account is represented by a **single sensor** containing key financial attributes like balance, cleared total, and account type.
 
 #### **Attributes for Accounts:**
 
@@ -135,7 +131,7 @@ Each YNAB account now has **one sensor** with relevant attributes instead of mul
 
 ### **Categories**
 
-Each YNAB budget category now has **one sensor** with relevant attributes instead of multiple sensors.
+Each category in your YNAB budget is exposed as a **single, attribute-rich sensor** that includes budgeted amount, spending, remaining balance, and goal tracking.
 
 #### **Attributes for Categories:**
 
@@ -153,7 +149,7 @@ Each YNAB budget category now has **one sensor** with relevant attributes instea
 
 ### **Latest Monthly Summary**
 
-You can now see the current months summary in  **one sensor** with relevant attributes.
+The **Monthly Summary sensor**, located under the **Extras** device, provides an overview of your current budget’s performance — including total activity, money to be budgeted, and average age of money.
 
 #### **Attributes for Latest Monthly Summary:**
 
@@ -161,6 +157,10 @@ You can now see the current months summary in  **one sensor** with relevant attr
 - **Activity** – (Default state value) The total amount spent for the current month.
 - **To Be Budgeted** – The remaining funds available to be assigned for the current month.
 - **Age Of Money** – The average age of your money, indicating financial stability.
+- **Unapproved Transactions** – Transactions that haven’t been manually approved
+- **Uncleared Transactions** – Still-pending transactions from active accounts
+- **Overspent Categories** – Categories that went negative this month
+- **Needs Attention Count** – A quick 0–3 score based on how many of the above are true
 
 ---
 
@@ -174,8 +174,15 @@ You can now see the current months summary in  **one sensor** with relevant attr
 
 ## 🔄 Recent Updates
 
+### 🎉 Version 1.3.1 Update
 
-## 🎉 Version 1.3.0 Update
+This version introduces smarter handling of **hidden categories**, improving dashboard clarity:
+
+- Hidden YNAB categories now include a `hidden: true` attribute.
+- Sensor names auto-append `(Hidden)` if the category is hidden in YNAB.
+- This makes it easy to exclude legacy or unused categories using templates.
+
+### 🎉 Version 1.3.0 Update
 
 
 Four new **Category**‑sensor attributes for cleaner dashboards—no extra templates needed!
