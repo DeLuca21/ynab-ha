@@ -79,6 +79,16 @@ class YNABApi:
             _LOGGER.error(f"Error fetching monthly summary for {current_month}: {e}")
             return {}
 
+    async def get_transactions(self, budget_id: str):
+        """Fetch recent transactions for a specific budget."""
+        if not budget_id or budget_id == "budgets":
+            _LOGGER.error("Invalid budget_id before transactions API call: %s", budget_id)
+            return {}
+
+        url = f"{self.BASE_URL}/budgets/{budget_id}/transactions"
+        _LOGGER.debug("Fetching transactions from URL: %s", url)
+        return await self._get(url)
+
     async def _get(self, url: str):
         """Generic GET request handler."""
         async with aiohttp.ClientSession() as session:

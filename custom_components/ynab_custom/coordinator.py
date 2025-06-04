@@ -30,7 +30,7 @@ class YNABDataUpdateCoordinator(DataUpdateCoordinator):
 
         # Fetch the currency symbol from the config entry
         self.currency_symbol = get_currency_symbol(self.entry.data.get(CONF_CURRENCY, "USD"))  # Convert to correct symbol
-        _LOGGER.debug(f"🔴 DEBUG: YNAB Currency Retrieved in Coordinator: {self.currency_symbol}")
+
 
 
         super().__init__(
@@ -60,34 +60,72 @@ class YNABDataUpdateCoordinator(DataUpdateCoordinator):
             
             # Fetch the monthly summary using the current month
             monthly_summary = await self.api.get_monthly_summary(self.budget_id, current_month)
-    
+            transactions = await self.api.get_transactions(self.budget_id)
 
             # Update last successful poll timestamp
             self.last_successful_poll = datetime.now().strftime("%B %d, %Y - %I:%M %p")
-            _LOGGER.debug(f"🔹 Last Successful API Poll: {self.last_successful_poll}")
-            _LOGGER.debug(f"Accounts Response: {accounts}")
-    
             # Filter accounts based on user selection
             budget_data["accounts"] = [
                 a for a in accounts.get("accounts", []) if a["id"] in self.selected_accounts
             ]
     
             _LOGGER.debug(f"🔹 Filtered Accounts: {budget_data['accounts']}")
-    
+
             # Filter categories based on user selection
             budget_data["categories"] = [
                 c for c_group in categories.get("category_groups", [])
                 for c in c_group.get("categories", []) if c["id"] in self.selected_categories
             ]
-    
+
             # Store the monthly summary data
             budget_data["monthly_summary"] = monthly_summary
+            budget_data["transactions"] = transactions.get("transactions", [])
 
             # Store Last Successful Poll in self.data
             budget_data["last_successful_poll"] = self.last_successful_poll
-    
+
+            # === New summary counts ===
+            all_transactions = budget_data["transactions"]
+            unapproved_transactions = len([t for t in all_transactions if not t.get("approved", True)])
+            
+            # Only count selected accounts that are currently returned from the API and not closed/deleted
+            selected_active_account_ids = {
+                a["id"]
+                for a in accounts.get("accounts", [])
+                if not a.get("closed", False)
+                and not a.get("deleted", False)
+                and a["id"] in [acc["id"] for acc in budget_data["accounts"]]
+            }
+            
+            # Count uncleared transactions (only 'uncleared', non-scheduled, from selected active accounts)
+            uncleared_transactions = len([
+                t for t in all_transactions
+                if t.get("cleared") == "uncleared"
+                and t.get("account_id") in selected_active_account_ids
+                and not t.get("scheduled_transaction_id")
+            ])
+            
+            # Count categories with a negative balance in the current month's budget
+            overspent_categories = len([
+                c for c in monthly_summary.get("month", {}).get("categories", [])
+                if c.get("balance", 0) < 0
+            ])
+            
+            # Combined attention metric
+            needs_attention_count = sum([
+                unapproved_transactions > 0,
+                uncleared_transactions > 0,
+                overspent_categories > 0
+            ])
+
+            # Add to coordinator data
+            budget_data["unapproved_transactions"] = unapproved_transactions
+            budget_data["uncleared_transactions"] = uncleared_transactions
+            budget_data["overspent_categories"] = overspent_categories
+            budget_data["needs_attention_count"] = needs_attention_count
+
             return budget_data
-    
+
         except Exception as e:
             _LOGGER.error("Error fetching YNAB data: %s", e)
             return self.data  # Keep previous data to avoid resetting sensors

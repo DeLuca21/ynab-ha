@@ -41,7 +41,6 @@ async def async_setup_entry(hass, entry, async_add_entities):
 
     # Fetch the currency symbol directly from coordinator
     currency_symbol = coordinator.currency_symbol
-    _LOGGER.error(f"🔴 DEBUG: Currency set for sensors (from coordinator): {currency_symbol}")  # Confirm currency being passed
 
     entities = []
     raw_budget_name = entry.data["budget_name"]
@@ -135,6 +134,20 @@ class YNABExtrasSensor(CoordinatorEntity, SensorEntity):
                     "To Be Budgeted": month_data.get("to_be_budgeted", 0) / 1000,
                     "Age of Money": month_data.get("age_of_money", 0),
                 }
+    
+                # Add new attention/transaction-related metrics
+                unapproved = self.coordinator.data.get("unapproved_transactions", 0)
+                uncleared = self.coordinator.data.get("uncleared_transactions", 0)
+                overspent = self.coordinator.data.get("overspent_categories", 0)
+                needs_attention = self.coordinator.data.get("needs_attention_count", 0)
+    
+                self._attr_extra_state_attributes.update({
+                    "Unapproved Transactions": unapproved,
+                    "Uncleared Transactions": uncleared,
+                    "Overspent Categories": overspent,
+                    "Needs Attention Count": needs_attention
+                })
+    
             else:
                 _LOGGER.error(f"Failed to retrieve valid month data for {self.instance_name}")
                 self._state = None
