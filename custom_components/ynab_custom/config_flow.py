@@ -113,11 +113,16 @@ class ConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
             accounts_response = await self.api.get_accounts(self.budget_id)
             categories_response = await self.api.get_categories(self.budget_id)
 
-            self.accounts = {a["id"]: a["name"] for a in accounts_response.get("accounts", [])}
+            self.accounts = {
+                a["id"]: a["name"] 
+                for a in accounts_response.get("accounts", [])
+                if not a.get("closed", False)
+            }
             self.categories = {
                 c["id"]: c["name"]
                 for group in categories_response.get("category_groups", [])
                 for c in group.get("categories", [])
+                if not c.get("hidden", False)
             }
 
             _LOGGER.debug("Fetched %d accounts and %d categories", len(self.accounts), len(self.categories))
