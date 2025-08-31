@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import logging
+import re
 import voluptuous as vol
 from typing import Any, Dict
 
@@ -113,14 +114,23 @@ class ConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
             accounts_response = await self.api.get_accounts(self.budget_id)
             categories_response = await self.api.get_categories(self.budget_id)
 
-            self.accounts = {a["id"]: a["name"] for a in accounts_response.get("accounts", [])}
-            self.categories = {
+            # Store all accounts and categories for later filtering based on user preferences
+            self.all_accounts = {a["id"]: a["name"] for a in accounts_response.get("accounts", [])}
+            self.all_categories = {
                 c["id"]: c["name"]
                 for group in categories_response.get("category_groups", [])
                 for c in group.get("categories", [])
             }
+            
+            # Store additional info for filtering
+            self.accounts_info = {a["id"]: a for a in accounts_response.get("accounts", [])}
+            self.categories_info = {
+                c["id"]: c
+                for group in categories_response.get("category_groups", [])
+                for c in group.get("categories", [])
+            }
 
-            _LOGGER.debug("Fetched %d accounts and %d categories", len(self.accounts), len(self.categories))
+            _LOGGER.debug("Fetched %d accounts and %d categories", len(self.all_accounts), len(self.all_categories))
 
             return await self.async_step_config_page()
 
@@ -149,6 +159,14 @@ class ConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
         selected_currency = user_input.get(CONF_CURRENCY, getattr(self, "selected_currency", "USD"))
 
         update_interval = user_input.get(CONF_UPDATE_INTERVAL, DEFAULT_UPDATE_INTERVAL)  # Default to 10 minutes
+        
+        # Filter options - default to excluding closed accounts and hidden categories
+        include_closed_accounts = user_input.get("Include Closed Accounts", False)
+        include_hidden_categories = user_input.get("Include Hidden Categories", False)
+        
+        # Apply filtering based on user preferences
+        self.accounts = self._filter_accounts(include_closed_accounts)
+        self.categories = self._filter_categories(include_hidden_categories)
 
         if user_input:
             self.instance_name = user_input.get("instance_name", self.budget_name)  # Default to raw budget name
@@ -174,6 +192,8 @@ class ConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
             vol.Optional("instance_name", default=self.budget_name): str,  # Default to raw budget name
             vol.Required(CONF_CURRENCY, default=self.selected_currency if hasattr(self, "selected_currency") else "USD"): vol.In(CURRENCY_OPTIONS),  # Default currency
             vol.Required(CONF_UPDATE_INTERVAL, default=DEFAULT_UPDATE_INTERVAL): vol.In(POLLING_INTERVAL_OPTIONS),
+            vol.Optional("Include Closed Accounts", default=False): bool,  # Checkbox for including closed accounts
+            vol.Optional("Include Hidden Categories", default=False): bool,  # Checkbox for including hidden categories
             vol.Required(CONF_SELECTED_ACCOUNTS, default=[SELECT_ALL_OPTION]): cv.multi_select(account_options),
             vol.Required(CONF_SELECTED_CATEGORIES, default=[SELECT_ALL_OPTION]): cv.multi_select(category_options),
         })
@@ -204,6 +224,28 @@ class ConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
                 CONF_UPDATE_INTERVAL: self.update_interval
             }
         )
+
+    def _filter_accounts(self, include_closed: bool) -> Dict[str, str]:
+        """Filter accounts based on closed status."""
+        if include_closed:
+            return self.all_accounts
+        
+        return {
+            account_id: name
+            for account_id, name in self.all_accounts.items()
+            if not self.accounts_info.get(account_id, {}).get("closed", False)
+        }
+
+    def _filter_categories(self, include_hidden: bool) -> Dict[str, str]:
+        """Filter categories based on hidden status."""
+        if include_hidden:
+            return self.all_categories
+        
+        return {
+            category_id: name
+            for category_id, name in self.all_categories.items()
+            if not self.categories_info.get(category_id, {}).get("hidden", False)
+        }
 
 # Define CannotConnect exception
 class CannotConnect(exceptions.HomeAssistantError):
