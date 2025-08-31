@@ -28,16 +28,19 @@
 
 ---
 
-##  What’s New in v1.4.0?
+##  What's New in v1.4.1?
 
-This update adds four powerful new attributes (found in the Monthly Summary sensor under the Extras device) to help you catch issues early and keep your budget clean:
+### 🎛️ **Enhanced Configuration Options**
+- **Checkbox filters** for closed accounts and hidden categories during setup
+- By default, **closed accounts** and **hidden categories** are now excluded for cleaner dashboards
+- Toggle these checkboxes during setup to include them if needed
 
-- `unapproved_transactions` -	Number of transactions that haven’t been approved this month
-- `uncleared_transactions` -	Count of “uncleared” transactions from selected active accounts
-- `overspent_categories` -	Number of categories currently in the red (negative balance)
-- `needs_attention_count` -	Combined count of the above three flags (range: 0–3)
+### 🐛 **Critical Bug Fix**
+- **Fixed TypeError crashes** when YNAB returns `null` values for goal fields
+- **Improved update reliability** - no more "Task exception was never retrieved" errors
+- **Better handling** of categories with savings goals and debt payments
 
-Use these attributes to build **“attention-needed” cards or alerts** in your dashboard — no extra templates or helpers needed.
+
 
 ---
 
@@ -103,7 +106,8 @@ You can see the **dashboard card example, setup flow, account details, category 
 6. Choose an **instance_name** or leave default.
 7. Pick your **preferred currency** (USD, EUR, etc.).
 8. Choose your desired **update_interval** or leave default (Longer intervals are better to not make too many API calls and not be rate limited).
-9. Select **Accounts & Categories** to include or leave as **Select All**.
+9. **Optional filters**: Check boxes to include closed accounts or hidden categories (both excluded by default).
+10. Select **Accounts & Categories** to include or leave as **Select All**.
 
 ### Obtaining Your YNAB API Key
 
@@ -174,6 +178,17 @@ The **Monthly Summary sensor**, located under the **Extras** device, provides an
 
 ## 🔄 Recent Updates
 
+### 🎉 Version 1.4.0 Update
+
+This update adds four powerful new attributes (found in the Monthly Summary sensor under the Extras device) to help you catch issues early and keep your budget clean:
+
+- `unapproved_transactions` -	Number of transactions that haven't been approved this month
+- `uncleared_transactions` -	Count of "uncleared" transactions from selected active accounts
+- `overspent_categories` -	Number of categories currently in the red (negative balance)
+- `needs_attention_count` -	Combined count of the above three flags (range: 0–3)
+
+Use these attributes to build **"attention-needed" cards or alerts** in your dashboard — no extra templates or helpers needed.
+
 ### 🎉 Version 1.3.1 Update
 
 This version introduces smarter handling of **hidden categories**, improving dashboard clarity:
@@ -211,7 +226,7 @@ I'm actively improving the YNAB integration and plan to introduce the following 
 
 - **Integration "Configure" option** - This may be reintroduced in a future update.
 
-- **Optional Exclusion of Hidden Categories** – Considering a toggle in the config flow to exclude hidden categories from being created as sensors, for cleaner dashboards.
+- ~~**Optional Exclusion of Hidden Categories**~~ – ✅ **Implemented in v1.4.1** - Toggle checkboxes now available in config flow to exclude hidden categories and closed accounts.
 
 ---
 
