@@ -43,7 +43,7 @@ def sanitize_budget_name(budget_name: str) -> str:
 class ConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
     """Handle a config flow for YNAB Custom integration."""
 
-    VERSION = "1.2.0"
+    VERSION = "1.4.1"
 
     async def async_step_user(self, user_input: Dict[str, Any] | None = None) -> FlowResult:
         """Handle the initial step to enter an access token."""
