@@ -340,7 +340,7 @@ class YNABCategorySensor(CoordinatorEntity, SensorEntity):
     @property
     def native_value(self):
         """Return the state of the sensor (category balance)."""
-        return self.category.get("balance", 0) / 1000  # Convert from milliunits
+        return (self.category.get("balance") or 0) / 1000  # Convert from milliunits
 
     @property
     def extra_state_attributes(self):
@@ -352,28 +352,28 @@ class YNABCategorySensor(CoordinatorEntity, SensorEntity):
             "category_group": self.category.get("category_group_name") or self.category.get("group_name", "Unknown"),
             "goal_type": self.category.get("goal_type", None),
             "goal_target": (self.category.get("goal_target") or 0) / 1000,
-            "goal_percentage_complete": self.category.get("goal_percentage_complete", 0),
+            "goal_percentage_complete": (self.category.get("goal_percentage_complete") or 0),
             "goal_overall_left": (self.category.get("goal_overall_left") or 0) / 1000,
             "percentage_spent": (
                 round(
-                    abs(self.category.get("activity", 0)) /
-                    abs(self.category.get("budgeted", 1)) * 100,
+                    abs(self.category.get("activity") or 0) /
+                    abs(self.category.get("budgeted") or 1) * 100,
                     2
                 )
-                if self.category.get("budgeted", 0) else 0.0
+                if (self.category.get("budgeted") or 0) else 0.0
             ),
             "needs_attention": (
-                self.category.get("balance", 0) < 0 or
+                (self.category.get("balance") or 0) < 0 or
                 (
-                    self.category.get("goal_target", 0) > 0 and
-                    self.category.get("goal_overall_left", 0) > 0
+                    (self.category.get("goal_target") or 0) > 0 and
+                    (self.category.get("goal_overall_left") or 0) > 0
                 )
             ),
             "attention_reason": (
-                "Overspent" if self.category.get("balance", 0) < 0 else
+                "Overspent" if (self.category.get("balance") or 0) < 0 else
                 "Underfunded" if (
-                    self.category.get("goal_target", 0) > 0 and
-                    self.category.get("goal_overall_left", 0) > 0
+                    (self.category.get("goal_target") or 0) > 0 and
+                    (self.category.get("goal_overall_left") or 0) > 0
                 ) else
                 "Ok"
             ),
