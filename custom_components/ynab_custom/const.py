@@ -8,7 +8,11 @@ CONF_CURRENCY = "Select Currency"
 CONF_SELECTED_BUDGET = "Select Budget to Import"
 CONF_UPDATE_INTERVAL = "Update Interval"
 CONF_BUDGET_NAME = "budget_name"
+CONF_INCLUDE_CLOSED_ACCOUNTS = "Include Closed Accounts"
+CONF_INCLUDE_HIDDEN_CATEGORIES = "Include Hidden Categories"
 DEFAULT_UPDATE_INTERVAL = 10  # Default to 10 minutes
+DEFAULT_INCLUDE_CLOSED_ACCOUNTS = False  # Default to excluding closed accounts
+DEFAULT_INCLUDE_HIDDEN_CATEGORIES = False  # Default to excluding hidden categories
 
 
 PLATFORMS = ["sensor"]
