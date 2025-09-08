@@ -10,7 +10,7 @@ from homeassistant.const import CONF_ACCESS_TOKEN
 from homeassistant.helpers import config_validation as cv
 from homeassistant.data_entry_flow import FlowResult
 
-from .const import DOMAIN, CONF_SELECTED_ACCOUNTS, CONF_SELECTED_CATEGORIES, CONF_CURRENCY, CONF_SELECTED_BUDGET, CONF_UPDATE_INTERVAL, DEFAULT_UPDATE_INTERVAL
+from .const import DOMAIN, CONF_SELECTED_ACCOUNTS, CONF_SELECTED_CATEGORIES, CONF_CURRENCY, CONF_SELECTED_BUDGET, CONF_UPDATE_INTERVAL, DEFAULT_UPDATE_INTERVAL, CONF_INCLUDE_CLOSED_ACCOUNTS, CONF_INCLUDE_HIDDEN_CATEGORIES, DEFAULT_INCLUDE_CLOSED_ACCOUNTS, DEFAULT_INCLUDE_HIDDEN_CATEGORIES
 from .api import YNABApi
 
 _LOGGER = logging.getLogger(__name__)
@@ -43,7 +43,7 @@ def sanitize_budget_name(budget_name: str) -> str:
 class ConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
     """Handle a config flow for YNAB Custom integration."""
 
-    VERSION = "1.4.1"
+    VERSION = 2
 
     async def async_step_user(self, user_input: Dict[str, Any] | None = None) -> FlowResult:
         """Handle the initial step to enter an access token."""
@@ -161,8 +161,8 @@ class ConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
         update_interval = user_input.get(CONF_UPDATE_INTERVAL, DEFAULT_UPDATE_INTERVAL)  # Default to 10 minutes
         
         # Filter options - default to excluding closed accounts and hidden categories
-        include_closed_accounts = user_input.get("Include Closed Accounts", False)
-        include_hidden_categories = user_input.get("Include Hidden Categories", False)
+        include_closed_accounts = user_input.get(CONF_INCLUDE_CLOSED_ACCOUNTS, DEFAULT_INCLUDE_CLOSED_ACCOUNTS)
+        include_hidden_categories = user_input.get(CONF_INCLUDE_HIDDEN_CATEGORIES, DEFAULT_INCLUDE_HIDDEN_CATEGORIES)
         
         # Apply filtering based on user preferences
         self.accounts = self._filter_accounts(include_closed_accounts)
@@ -192,8 +192,8 @@ class ConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
             vol.Optional("instance_name", default=self.budget_name): str,  # Default to raw budget name
             vol.Required(CONF_CURRENCY, default=self.selected_currency if hasattr(self, "selected_currency") else "USD"): vol.In(CURRENCY_OPTIONS),  # Default currency
             vol.Required(CONF_UPDATE_INTERVAL, default=DEFAULT_UPDATE_INTERVAL): vol.In(POLLING_INTERVAL_OPTIONS),
-            vol.Optional("Include Closed Accounts", default=False): bool,  # Checkbox for including closed accounts
-            vol.Optional("Include Hidden Categories", default=False): bool,  # Checkbox for including hidden categories
+            vol.Optional(CONF_INCLUDE_CLOSED_ACCOUNTS, default=DEFAULT_INCLUDE_CLOSED_ACCOUNTS): bool,  # Checkbox for including closed accounts
+            vol.Optional(CONF_INCLUDE_HIDDEN_CATEGORIES, default=DEFAULT_INCLUDE_HIDDEN_CATEGORIES): bool,  # Checkbox for including hidden categories
             vol.Required(CONF_SELECTED_ACCOUNTS, default=[SELECT_ALL_OPTION]): cv.multi_select(account_options),
             vol.Required(CONF_SELECTED_CATEGORIES, default=[SELECT_ALL_OPTION]): cv.multi_select(category_options),
         })
