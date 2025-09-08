@@ -28,17 +28,19 @@
 
 ---
 
-##  What's New in v1.4.1?
+##  What's New in v1.4.2?
 
-### 🎛️ **Enhanced Configuration Options**
-- **Checkbox filters** for closed accounts and hidden categories during setup
-- By default, **closed accounts** and **hidden categories** are now excluded for cleaner dashboards
-- Toggle these checkboxes during setup to include them if needed
-
-### 🐛 **Critical Bug Fix**
+### 🔧 **Critical Migration & Stability Fixes**
+- **Fixed "Migration Error"** when upgrading from v1.4.0
+- **Robust config entry migration** with proper fallback handling
 - **Fixed TypeError crashes** when YNAB returns `null` values for goal fields
 - **Improved update reliability** - no more "Task exception was never retrieved" errors
-- **Better handling** of categories with savings goals and debt payments
+- **Enhanced logging** for better troubleshooting
+
+### 🎛️ **Filter Options (New Setups Only)**
+- **Closed accounts** and **hidden categories** are now excluded by default for cleaner dashboards
+- Available during initial setup - **delete and re-add integration** to access these options
+- **Full configuration options** coming in v1.5.0 with "Configure" button
 
 
 
@@ -178,6 +180,20 @@ The **Monthly Summary sensor**, located under the **Extras** device, provides an
 
 ## 🔄 Recent Updates
 
+### 🎉 Version 1.4.1 Update
+
+**Configuration Improvements:**
+- Added **checkbox filters** during setup to include/exclude closed accounts and hidden categories
+- **Closed accounts** and **hidden categories** are now excluded by default for cleaner dashboards
+- Enhanced config flow with better filtering options
+
+**Bug Fixes:**
+- Fixed `TypeError: '>' not supported between instances of 'NoneType' and 'int'` crashes
+- Improved handling of YNAB categories with `null` goal values
+- Enhanced sensor stability for categories with goals
+
+*Note: v1.4.1 had migration issues - please use v1.4.2 or later*
+
 ### 🎉 Version 1.4.0 Update
 
 This update adds four powerful new attributes (found in the Monthly Summary sensor under the Extras device) to help you catch issues early and keep your budget clean:
@@ -188,28 +204,6 @@ This update adds four powerful new attributes (found in the Monthly Summary sens
 - `needs_attention_count` -	Combined count of the above three flags (range: 0–3)
 
 Use these attributes to build **"attention-needed" cards or alerts** in your dashboard — no extra templates or helpers needed.
-
-### 🎉 Version 1.3.1 Update
-
-This version introduces smarter handling of **hidden categories**, improving dashboard clarity:
-
-- Hidden YNAB categories now include a `hidden: true` attribute.
-- Sensor names auto-append `(Hidden)` if the category is hidden in YNAB.
-- This makes it easy to exclude legacy or unused categories using templates.
-
-### 🎉 Version 1.3.0 Update
-
-
-Four new **Category**‑sensor attributes for cleaner dashboards—no extra templates needed!
-
-| Attribute           | What it does                                                             |
-| ------------------- | ------------------------------------------------------------------------ |
-| `percentage_spent`  | % of this month’s budget already spent (0 % when nothing budgeted).      |
-| `needs_attention`   | **true / false** flag if the category is Overspent *or* Under‑funded.    |
-| `attention_reason`  | `"Overspent"`, `"Underfunded"`, or `"Ok"` so you know why.               |
-| `goal_overall_left` | Money still required to hit the goal target, converted to your currency. |
-
-These are calculated inside the integration—no extra API calls, no new entities.  
 
 
 ---
@@ -224,9 +218,10 @@ I'm actively improving the YNAB integration and plan to introduce the following 
 
 - **Manual Refresh Service** (`ynab_custom.refresh`): Not present in this release but may return in a future update.
 
-- **Integration "Configure" option** - This may be reintroduced in a future update.
 
 - ~~**Optional Exclusion of Hidden Categories**~~ – ✅ **Implemented in v1.4.1** - Toggle checkboxes now available in config flow to exclude hidden categories and closed accounts.
+
+- **Post-setup "Configure" Flow** – Coming in v1.5.0 - Change settings after initial setup without re-installing.
 
 ---
 
