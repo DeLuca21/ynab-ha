@@ -2,6 +2,8 @@
 
 import aiohttp
 import logging
+from datetime import datetime, timedelta
+from collections import deque
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -10,10 +12,67 @@ class YNABApi:
 
     BASE_URL = "https://api.youneedabudget.com/v1"
 
-    def __init__(self, access_token: str):
+    def __init__(self, access_token: str, shared_tracking: dict = None):
         """Initialize the API client."""
         self.access_token = access_token
         self.headers = {"Authorization": f"Bearer {access_token}"}
+        
+        # Use shared request tracking if provided, otherwise create local tracking
+        if shared_tracking:
+            self.request_timestamps = shared_tracking["request_timestamps"]
+            self._shared_tracking = shared_tracking  # Keep reference for shared counter
+        else:
+            # Fallback to local tracking (for backwards compatibility)
+            self.request_timestamps = deque()
+            self._shared_tracking = None
+
+    def _track_request(self):
+        """Track a new API request with timestamp."""
+        now = datetime.now()
+        self.request_timestamps.append(now)
+        
+        # Update shared total counter (cumulative across all instances)
+        if self._shared_tracking:
+            self._shared_tracking["total_requests"] += 1  # Increment shared counter
+        else:
+            # Fallback for local tracking
+            if not hasattr(self, 'total_requests'):
+                self.total_requests = 0
+            self.total_requests += 1
+        
+        # Clean old requests (older than 1 hour)
+        cutoff_time = now - timedelta(hours=1)
+        cleaned_count = 0
+        while self.request_timestamps and self.request_timestamps[0] < cutoff_time:
+            self.request_timestamps.popleft()
+            cleaned_count += 1
+        
+
+    def get_rate_limit_info(self):
+        """Get current rate limit status and statistics."""
+        now = datetime.now()
+        
+        # Clean old requests first
+        cutoff_time = now - timedelta(hours=1)
+        while self.request_timestamps and self.request_timestamps[0] < cutoff_time:
+            self.request_timestamps.popleft()
+        
+        requests_this_hour = len(self.request_timestamps)
+        estimated_remaining = max(0, 200 - requests_this_hour)
+        
+        # Calculate when the rate limit resets (1 hour from oldest request)
+        if self.request_timestamps:
+            oldest_request = self.request_timestamps[0]
+            rate_limit_resets_at = oldest_request + timedelta(hours=1)
+        else:
+            rate_limit_resets_at = now + timedelta(hours=1)
+        
+        return {
+            "requests_made_total": self._shared_tracking["total_requests"] if self._shared_tracking else getattr(self, 'total_requests', 0),
+            "requests_this_hour": requests_this_hour,
+            "estimated_remaining": estimated_remaining,
+            "rate_limit_resets_at": rate_limit_resets_at.strftime("%I:%M %p"),
+        }
 
     async def get_budgets(self):
         """Fetch available budgets."""
@@ -61,22 +120,17 @@ class YNABApi:
         url = f"{self.BASE_URL}/budgets/{budget_id}/months/{current_month}"  # Include the full date with day
         _LOGGER.debug(f"Requesting URL: {url}")  # Log the full URL being requested
 
-        try:
-            # Fetch the data
-            response = await self._get(url)
+        # Fetch the data - let 429 errors propagate to coordinator
+        response = await self._get(url)
 
-            # Log the response data
-            _LOGGER.debug(f"Response for {url}: {response}")
+        # Log the response data
+        _LOGGER.debug(f"Response for {url}: {response}")
 
-            # If response contains data, return it
-            if response:
-                return response
-            else:
-                _LOGGER.warning(f"No data found for {current_month} in budget: {budget_id}")
-                return {}
-        except Exception as e:
-            # Log any errors during the request
-            _LOGGER.error(f"Error fetching monthly summary for {current_month}: {e}")
+        # If response contains data, return it
+        if response:
+            return response
+        else:
+            _LOGGER.warning(f"No data found for {current_month} in budget: {budget_id}")
             return {}
 
     async def get_transactions(self, budget_id: str):
@@ -91,6 +145,10 @@ class YNABApi:
 
     async def _get(self, url: str):
         """Generic GET request handler."""
+        # Track this request
+        self._track_request()
+        
+        
         async with aiohttp.ClientSession() as session:
             async with session.get(url, headers=self.headers) as response:
                 if response.status == 200:
@@ -100,4 +158,9 @@ class YNABApi:
                 else:
                     # Log if the request fails
                     _LOGGER.error("YNAB API error: %s - URL: %s", response.status, url)
+                    
+                    # Raise exception for 429 errors so coordinator can catch them
+                    if response.status == 429:
+                        raise Exception(f"429 - Too Many Requests: {url}")
+                    
                     return {}
