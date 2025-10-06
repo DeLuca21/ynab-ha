@@ -28,21 +28,23 @@
 
 ---
 
-##  What's New in v1.4.2?
+##  What's New in v1.5.0?
 
-### 🔧 **Critical Migration & Stability Fixes**
-- **Fixed "Migration Error"** when upgrading from v1.4.0
-- **Robust config entry migration** with proper fallback handling
-- **Fixed TypeError crashes** when YNAB returns `null` values for goal fields
-- **Improved update reliability** - no more "Task exception was never retrieved" errors
-- **Enhanced logging** for better troubleshooting
-
-### 🎛️ **Filter Options (New Setups Only)**
-- **Closed accounts** and **hidden categories** are now excluded by default for cleaner dashboards
-- Available during initial setup - **delete and re-add integration** to access these options
-- **Full configuration options** coming in v1.5.0 with "Configure" button
+### 🎛️ **Post-Setup Configuration (Configure Button)**
+- **"Configure" button** now available in integration settings - no more re-installing to change settings!
+- **Instance name changes** - update your budget's display name anytime
+- **Currency format updates** - change currency display without reinstalling
+- **Update interval changes** - adjust refresh frequency without reinstalling
+- **Dynamic account/category selection** - add/remove accounts and categories after setup
+- **Filter toggles** - include/exclude closed accounts and hidden categories anytime
 
 
+### 🔧 **Enhanced API Status & Diagnostics**
+- **Comprehensive API status sensor** with detailed rate limit tracking
+- **Persistent data storage** - sensors retain data during rate limits and HA restarts
+- **Intelligent status detection** - accurately shows "Rate Limited" vs "Connected" status
+- **Request tracking** - monitor API usage across all YNAB integrations
+- **Rolling window rate limit** - proper calculation of when rate limits reset
 
 ---
 
@@ -123,6 +125,22 @@ You can see the **dashboard card example, setup flow, account details, category 
 
 YNAB data is represented using **compact, attribute-rich sensors** — each account, category, and summary uses a single sensor packed with all relevant details.
 
+### **API Status & Diagnostics**
+
+The **API Status sensor**, located under the **Extras** device, provides comprehensive monitoring of your YNAB integration's health and API usage.
+
+#### **Attributes for API Status:**
+
+- **Status** (Default state value) – Current API connection status (`Connected`, `Rate Limited`, `API Error`, etc.)
+- **Last Error** – Details of the most recent API error, if any
+- **Last Error Time** – Timestamp of the last API error
+- **Consecutive Failures** – Number of consecutive API failures
+- **Requests Made Total** – Total API requests made across all YNAB integrations using the same token
+- **Requests This Hour** – API requests made in the current rolling hour window
+- **Rate Limit Resets At** – Time when the next request slot becomes available (rolling window)
+- **Is At Limit** – Whether currently rate limited (`true`/`false`)
+- **Last Successful Request** – Timestamp of the last successful API call
+
 ### **Accounts**
 
 Each YNAB account is represented by a **single sensor** containing key financial attributes like balance, cleared total, and account type.
@@ -180,31 +198,18 @@ The **Monthly Summary sensor**, located under the **Extras** device, provides an
 
 ## 🔄 Recent Updates
 
-### 🎉 Version 1.4.1 Update
+### 🎉 Version 1.4.2 Update
 
-**Configuration Improvements:**
-- Added **checkbox filters** during setup to include/exclude closed accounts and hidden categories
+**Critical Migration & Stability Fixes:**
+- **Fixed "Migration Error"** when upgrading from v1.4.0
+- **Robust config entry migration** with proper fallback handling
+- **Fixed TypeError crashes** when YNAB returns `null` values for goal fields
+- **Improved update reliability** - no more "Task exception was never retrieved" errors
+- **Enhanced logging** for better troubleshooting
+
+**Filter Options (New Setups Only):**
 - **Closed accounts** and **hidden categories** are now excluded by default for cleaner dashboards
-- Enhanced config flow with better filtering options
-
-**Bug Fixes:**
-- Fixed `TypeError: '>' not supported between instances of 'NoneType' and 'int'` crashes
-- Improved handling of YNAB categories with `null` goal values
-- Enhanced sensor stability for categories with goals
-
-*Note: v1.4.1 had migration issues - please use v1.4.2 or later*
-
-### 🎉 Version 1.4.0 Update
-
-This update adds four powerful new attributes (found in the Monthly Summary sensor under the Extras device) to help you catch issues early and keep your budget clean:
-
-- `unapproved_transactions` -	Number of transactions that haven't been approved this month
-- `uncleared_transactions` -	Count of "uncleared" transactions from selected active accounts
-- `overspent_categories` -	Number of categories currently in the red (negative balance)
-- `needs_attention_count` -	Combined count of the above three flags (range: 0–3)
-
-Use these attributes to build **"attention-needed" cards or alerts** in your dashboard — no extra templates or helpers needed.
-
+- Available during initial setup - **delete and re-add integration** to access these options
 
 ---
 
@@ -221,7 +226,7 @@ I'm actively improving the YNAB integration and plan to introduce the following 
 
 - ~~**Optional Exclusion of Hidden Categories**~~ – ✅ **Implemented in v1.4.1** - Toggle checkboxes now available in config flow to exclude hidden categories and closed accounts.
 
-- **Post-setup "Configure" Flow** – Coming in v1.5.0 - Change settings after initial setup without re-installing.
+- ~~**Post-setup "Configure" Flow**~~ – ✅ **Implemented in v1.5.0** - "Configure" button now available to change settings after initial setup without re-installing.
 
 ---
 
