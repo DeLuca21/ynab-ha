@@ -46,25 +46,12 @@ async def async_setup_entry(hass, entry, async_add_entities):
     raw_budget_name = entry.data["budget_name"]
     sanitized_budget_name = sanitize_budget_name(raw_budget_name)
 
-    # Fetch monthly summary for the current month
-    current_month = datetime.now().strftime("%Y-%m-01")
-
-    try:
-        monthly_summary = await coordinator.api.get_monthly_summary(coordinator.budget_id, current_month)
-        _LOGGER.debug(f"🔹 Monthly Summary Response: {monthly_summary}")
-    except Exception as e:
-        _LOGGER.error(f"🚨 Error fetching monthly summary for {current_month}: {e}")
-        return
-
-    if "month" not in monthly_summary:
-        _LOGGER.error(f"🚨 No 'month' data found in response for {current_month}. Full response: {monthly_summary}")
-        return
-
-    # Use new class name
-    entities.append(YNABExtrasSensor(coordinator, monthly_summary, currency_symbol, raw_budget_name))
+    # Create monthly summary sensor - it will use data from coordinator.data
+    # No need to fetch data here, the coordinator handles all API calls
+    entities.append(YNABExtrasSensor(coordinator, currency_symbol, raw_budget_name))
 
     # Ensure diagnostics sensors are always added
-    entities.append(YNABLastSuccessfulPollSensor(coordinator, raw_budget_name))
+    entities.append(YNABAPIStatusSensor(coordinator, raw_budget_name))
 
     _LOGGER.debug(f"🔹 Coordinator Accounts Data: {coordinator.data.get('accounts', [])}")
 
@@ -86,11 +73,10 @@ async def async_setup_entry(hass, entry, async_add_entities):
 class YNABExtrasSensor(CoordinatorEntity, SensorEntity):
     """Representation of the YNAB Extras sensor (combining Monthly Budget & Diagnostics as separate sensors)."""
 
-    def __init__(self, coordinator: YNABDataUpdateCoordinator, monthly_summary, currency_symbol, instance_name):
+    def __init__(self, coordinator: YNABDataUpdateCoordinator, currency_symbol, instance_name):
         """Initialize the sensor."""
         super().__init__(coordinator)
         self.coordinator = coordinator
-        self.monthly_summary = monthly_summary
         self.currency_symbol = currency_symbol
         self.instance_name = instance_name
         self._state = None
@@ -120,9 +106,12 @@ class YNABExtrasSensor(CoordinatorEntity, SensorEntity):
         self.update_attributes()
 
     def update_attributes(self):
-        """Update attributes for Sensors."""
-        if self.monthly_summary and "month" in self.monthly_summary:
-            month_data = self.monthly_summary.get("month", {})
+        """Update attributes for Sensors - works like other sensors, using coordinator.data."""
+        # Get monthly summary data from coordinator (same as other sensors)
+        monthly_summary = self.coordinator.data.get("monthly_summary", {})
+        
+        if monthly_summary and "month" in monthly_summary:
+            month_data = monthly_summary.get("month", {})
             if month_data:
                 # Set the state as the activity (default to activity if not found)
                 self._state = month_data.get("activity", 0) / 1000  # Default to 0 if activity is missing
@@ -152,7 +141,8 @@ class YNABExtrasSensor(CoordinatorEntity, SensorEntity):
                 _LOGGER.error(f"Failed to retrieve valid month data for {self.instance_name}")
                 self._state = None
         else:
-            _LOGGER.error(f"No month data found in coordinator data for {self.instance_name}")
+            _LOGGER.warning(f"No monthly summary data available for {self.instance_name}")
+            self._state = None
 
     @property
     def name(self):
@@ -184,18 +174,18 @@ class YNABExtrasSensor(CoordinatorEntity, SensorEntity):
         """Return the icon for the sensor."""
         return self._attr_icon  # Return the default icon for the monthly summary sensor
 
-class YNABLastSuccessfulPollSensor(CoordinatorEntity, SensorEntity):
-    """Sensor to track the last successful API poll timestamp."""
+class YNABAPIStatusSensor(CoordinatorEntity, SensorEntity):
+    """Sensor to track YNAB API connection status and health."""
 
     def __init__(self, coordinator, instance_name):
         """Initialize the sensor."""
         super().__init__(coordinator)
         self.instance_name = instance_name
-        self._attr_name = f"Last Successful Poll YNAB {self.instance_name}"
-        self._attr_unique_id = f"last_successful_poll_ynab_{self.coordinator.entry.entry_id}"
-        self._attr_icon = "mdi:clock-check-outline"
+        self._attr_name = f"YNAB API Status YNAB {self.instance_name}"
+        self._attr_unique_id = f"ynab_api_status_ynab_{self.coordinator.entry.entry_id}"
+        self._attr_icon = "mdi:api"
         
-        # FIX: Assign to the "Extras" device
+        # Assign to the "Extras" device
         self._attr_device_info = {
             "identifiers": {(DOMAIN, f"{coordinator.entry.entry_id}_extras")},
             "name": f"YNAB {self.instance_name} - Extras",
@@ -204,13 +194,35 @@ class YNABLastSuccessfulPollSensor(CoordinatorEntity, SensorEntity):
             "entry_type": "service",
         }
 
-        # FIX: Assign to the Diagnostic Category
+        # Assign to the Diagnostic Category
         self._attr_entity_category = EntityCategory.DIAGNOSTIC
 
     @property
     def native_value(self):
-        """Return the timestamp of the last successful poll."""
-        return self.coordinator.data.get("last_successful_poll", "Never")
+        """Return the current API status."""
+        api_status = self.coordinator.data.get("api_status", {})
+        base_status = api_status.get("status", "Unknown")
+        
+        # Only show "Rate Limited" if we're actually getting 429 errors
+        # Don't override based on our estimated 200 limit since YNAB's real limit appears higher
+        return base_status
+
+    @property
+    def extra_state_attributes(self):
+        """Return additional API status attributes."""
+        api_status = self.coordinator.data.get("api_status", {})
+        return {
+            "last_error": api_status.get("last_error", "None"),
+            "last_error_time": api_status.get("last_error_time", "Never"),
+            "consecutive_failures": api_status.get("consecutive_failures", 0),
+            "requests_made_total_all_integrations": api_status.get("requests_made_total", 0),
+            "requests_this_hour_all_integrations": api_status.get("requests_this_hour", 0),
+            "estimated_remaining": api_status.get("estimated_remaining", 200),
+            "rate_limit_resets_at": api_status.get("rate_limit_resets_at", "Unknown"),
+            "is_at_limit": api_status.get("is_at_limit", False),
+            "last_successful_request": api_status.get("last_successful_request", "Never"),
+            "note": "Counts include all YNAB integrations using the same API token",
+        }
 
 class YNABAccountSensor(CoordinatorEntity, SensorEntity):
     """YNAB Account Sensor."""
@@ -225,7 +237,12 @@ class YNABAccountSensor(CoordinatorEntity, SensorEntity):
 
         # Preserve your naming structure
         self._attr_unique_id = f"ynab_{instance_name}_{account['id']}"
-        self._attr_name = f"{account['name']} YNAB {instance_name}"  # Friendly name for sensor
+        
+        # Add (Closed) suffix for closed accounts, matching category pattern
+        account_name = account["name"]
+        if account.get("closed"):
+            account_name += " (Closed)"
+        self._attr_name = f"{account_name} YNAB {instance_name}"  # Friendly name for sensor
 
         budget_id = entry.data["budget_id"]
         self._attr_device_info = {
@@ -285,6 +302,7 @@ class YNABAccountSensor(CoordinatorEntity, SensorEntity):
             (a for a in self.coordinator.data.get("accounts", []) if a["id"] == self.account["id"]),
             self.account  # Keep the old data if not found
         )
+
 
         # Update the icon if the account type changed
         account_type = self.account.get("type", "").lower()
@@ -393,6 +411,7 @@ class YNABCategorySensor(CoordinatorEntity, SensorEntity):
             (c for c in self.coordinator.data.get("categories", []) if c["id"] == self.category["id"]),
             self.category  # Keep the old data if not found
         )
+
 
         # Update the icon in case the category name changed
         category_name = self.category.get("name", "").lower().replace(" ", "_")
