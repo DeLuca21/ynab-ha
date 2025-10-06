@@ -4,9 +4,10 @@ import logging
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers.typing import ConfigType
+from homeassistant.helpers import entity_registry as er
 import re
 
-from .const import DOMAIN, CONF_UPDATE_INTERVAL, DEFAULT_UPDATE_INTERVAL, CONF_INCLUDE_CLOSED_ACCOUNTS, CONF_INCLUDE_HIDDEN_CATEGORIES, DEFAULT_INCLUDE_CLOSED_ACCOUNTS, DEFAULT_INCLUDE_HIDDEN_CATEGORIES
+from .const import DOMAIN, CONF_UPDATE_INTERVAL, DEFAULT_UPDATE_INTERVAL, CONF_INCLUDE_CLOSED_ACCOUNTS, CONF_INCLUDE_HIDDEN_CATEGORIES, DEFAULT_INCLUDE_CLOSED_ACCOUNTS, DEFAULT_INCLUDE_HIDDEN_CATEGORIES, CONF_SELECTED_ACCOUNTS, CONF_SELECTED_CATEGORIES
 from .coordinator import YNABDataUpdateCoordinator
 
 _LOGGER = logging.getLogger(__name__)
@@ -60,6 +61,8 @@ async def async_migrate_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
 
 async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     """Set up YNAB Custom from a config entry."""
+    _LOGGER.debug(f"Setting up YNAB integration {entry.entry_id}")
+    
     budget_id = entry.data.get("budget_id")
     budget_name = entry.data.get("budget_name")
 
@@ -71,6 +74,9 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     sanitized_budget_name = sanitize_budget_name(budget_name)
     coordinator = YNABDataUpdateCoordinator(hass, entry, budget_id, sanitized_budget_name)
 
+    # Load persistent data before first refresh
+    await coordinator.async_load_persistent_data()
+    
     await coordinator.async_config_entry_first_refresh()  # Ensure the first update occurs
     hass.async_create_task(coordinator.async_refresh())  # 🔹 Manually force an update on startup
 
@@ -80,15 +86,73 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     hass.data[DOMAIN][entry.entry_id] = coordinator
     await hass.config_entries.async_forward_entry_setups(entry, ["sensor"])
 
+    # Set up options update listener
+    entry.async_on_unload(entry.add_update_listener(async_update_options))
+
     _LOGGER.info(f"YNAB Custom integration for {sanitized_budget_name} successfully loaded.")
     return True
 
 
+async def async_update_options(hass: HomeAssistant, entry: ConfigEntry) -> None:
+    """Update options."""
+    
+    # Get the coordinator to check what changed
+    coordinator = hass.data.get(DOMAIN, {}).get(entry.entry_id)
+    if coordinator:
+        old_accounts = set(coordinator.selected_accounts)
+        old_categories = set(coordinator.selected_categories)
+        new_accounts = set(entry.data.get(CONF_SELECTED_ACCOUNTS, []))
+        new_categories = set(entry.data.get(CONF_SELECTED_CATEGORIES, []))
+        
+        _LOGGER.debug(f"Options update - OLD accounts: {old_accounts}, NEW accounts: {new_accounts}")
+        _LOGGER.debug(f"Options update - OLD categories: {old_categories}, NEW categories: {new_categories}")
+        
+        if old_accounts != new_accounts or old_categories != new_categories:
+            _LOGGER.info(f"Account/category selections changed - doing full unload/reload cycle")
+            
+            # Force a complete unload/reload cycle to ensure clean state
+            unload_result = await hass.config_entries.async_unload(entry.entry_id)
+            setup_result = await hass.config_entries.async_setup(entry.entry_id)
+            
+            _LOGGER.info(f"Unload/reload cycle complete - Unload: {unload_result}, Setup: {setup_result}")
+            return
+        else:
+            _LOGGER.debug(f"Only settings changed, doing simple reload")
+    else:
+        _LOGGER.warning(f"No coordinator found for {entry.entry_id}")
+    
+    # Simple reload for non-selection changes
+    await hass.config_entries.async_reload(entry.entry_id)
+    _LOGGER.debug(f"Simple reload complete")
+
+
 async def async_unload_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     """Unload a config entry."""
+    
+    # Clean up entity registry entries for this config entry
+    entity_registry = er.async_get(hass)
+    entities_to_remove = []
+    
+    for entity_entry in entity_registry.entities.values():
+        if entity_entry.config_entry_id == entry.entry_id:
+            entities_to_remove.append(entity_entry.entity_id)
+    
+    # Remove entities from registry
+    removed_entities = []
+    for entity_id in entities_to_remove:
+        entity_registry.async_remove(entity_id)
+        removed_entities.append(entity_id)
+    
     coordinator = hass.data[DOMAIN].pop(entry.entry_id, None)
 
     if coordinator:
         await coordinator.async_shutdown()
 
-    return await hass.config_entries.async_unload_platforms(entry, ["sensor"])
+    result = await hass.config_entries.async_unload_platforms(entry, ["sensor"])
+    
+    if removed_entities:
+        _LOGGER.debug(f"Unload complete for {entry.entry_id} - removed {len(removed_entities)} entities")
+    else:
+        _LOGGER.debug(f"Unload complete for {entry.entry_id}")
+    
+    return result
