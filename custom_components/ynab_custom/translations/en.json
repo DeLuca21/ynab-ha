@@ -16,6 +16,7 @@
       "error": {
         "cannot_connect": "⚠️ Failed to connect to YNAB. Please check your network and credentials.",
         "invalid_auth": "❌ Invalid authentication. Please enter a valid access token.",
+        "rate_limited": "⏰ YNAB API rate limit exceeded. Please wait a few minutes and try again.",
         "unknown": "⚠️ An unexpected error occurred. Please check your Home Assistant logs."
       }
     },
@@ -23,7 +24,7 @@
       "step": {
         "init": {
           "title": "YNAB Integration Options",
-          "description": "Customize your integration settings.\n\n🔹 **Options Available:**\n- **Select Accounts to Sync**: Choose which YNAB accounts should be imported.\n- **Select Categories to Sync**: Pick specific categories to include.\n- **Set Update Interval**: Define how often Home Assistant should fetch updates (in minutes).",
+          "description": "Configure accounts, categories, and settings for your YNAB integration.",
           "data": {
             "selected_accounts": "Select Accounts to Sync",
             "selected_categories": "Select Categories to Sync",
