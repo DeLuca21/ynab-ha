@@ -2,7 +2,7 @@ import logging
 import re
 from datetime import datetime
 from homeassistant.helpers.update_coordinator import CoordinatorEntity
-from homeassistant.components.sensor import SensorEntity
+from homeassistant.components.sensor import SensorEntity, SensorDeviceClass, SensorStateClass
 from homeassistant.const import CONF_CURRENCY
 from homeassistant.core import callback
 from .coordinator import YNABDataUpdateCoordinator
@@ -98,6 +98,16 @@ class YNABExtrasSensor(CoordinatorEntity, SensorEntity):
         }
         self._attr_native_unit_of_measurement = self.currency_symbol
         _LOGGER.debug(f"Initialized YNABExtrasSensor with ID: {self._unique_id}")
+
+    @property
+    def device_class(self):
+        """Return the device class for statistics support."""
+        return SensorDeviceClass.MONETARY
+
+    @property
+    def state_class(self):
+        """Return the state class for statistics support."""
+        return SensorStateClass.TOTAL
 
     async def async_added_to_hass(self):
         """Call when entity is added to hass."""
@@ -266,6 +276,16 @@ class YNABAccountSensor(CoordinatorEntity, SensorEntity):
         return ACCOUNT_ICONS["default"]  # Default icon if no match is found
 
     @property
+    def device_class(self):
+        """Return the device class for statistics support."""
+        return SensorDeviceClass.MONETARY
+
+    @property
+    def state_class(self):
+        """Return the state class for statistics support."""
+        return SensorStateClass.TOTAL
+
+    @property
     def native_unit_of_measurement(self):
         """Return the correct currency symbol explicitly for HA to recognize it."""
         return self.currency_symbol  # Ensure HA correctly applies the currency
@@ -349,6 +369,16 @@ class YNABCategorySensor(CoordinatorEntity, SensorEntity):
             if category_name.startswith(key):  # Check if the category name starts with any key in CATEGORY_ICONS
                 return CATEGORY_ICONS[key]
         return "mdi:currency-usd"  # Default icon if no match is found
+
+    @property
+    def device_class(self):
+        """Return the device class for statistics support."""
+        return SensorDeviceClass.MONETARY
+
+    @property
+    def state_class(self):
+        """Return the state class for statistics support."""
+        return SensorStateClass.TOTAL
 
     @property
     def native_unit_of_measurement(self):
