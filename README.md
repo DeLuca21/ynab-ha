@@ -28,6 +28,15 @@
 
 ---
 
+##  What's New in v1.5.1?
+
+### 📊 **Statistics API Support**
+- **Home Assistant Statistics API** now fully supported for all YNAB sensors
+- **Programmatic data access** - use YNAB data in automations, scripts, and custom dashboards
+- **Rich statistical data** - access state, change, and sum values for account and category balances
+
+---
+
 ##  What's New in v1.5.0?
 
 ### 🎛️ **Post-Setup Configuration (Configure Button)**
