@@ -1,0 +1,14 @@
+{
+  "domain": "ynab_custom",
+  "name": "YNAB Integration for Home Assistant",
+  
+  "codeowners": ["@DeLuca21"],
+  "config_flow": true,
+  "dependencies": [],
+  "documentation": "https://github.com/DeLuca21/ynab-ha",
+  "iot_class": "cloud_polling",
+  "issue_tracker": "https://github.com/DeLuca21/ynab-ha/issues",
+  "requirements": ["aiohttp"],
+  "platforms": ["sensor", "number"],
+  "version": "1.5.1"
+}
