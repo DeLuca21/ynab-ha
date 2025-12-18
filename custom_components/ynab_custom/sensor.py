@@ -30,6 +30,7 @@ def get_currency_symbol(currency_code):
         "CHF": "CHF",
         "SEK": "kr",
         "NZD": "NZ$",
+        "NIS": "₪",
     }
     return currency_map.get(currency_code, "$")
 
