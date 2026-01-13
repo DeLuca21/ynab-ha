@@ -29,6 +29,7 @@ CURRENCY_OPTIONS = {
     "CHF": "CHF (Swiss Franc)",
     "SEK": "kr (Swedish Krona)",
     "NZD": "NZ$ (New Zealand Dollar)",
+    "CZK": "Kč (Czech Crown)",
 }
 
 # Polling interval options (5-60 minutes)
