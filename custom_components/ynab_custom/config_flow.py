@@ -66,6 +66,11 @@ class ConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
                     vol.Required(CONF_ACCESS_TOKEN): str,
                     vol.Required("Accept Terms", default=False): bool  # Checkbox for accepting the terms
                 }),
+                description_placeholders={
+                    "developer_url": "https://app.ynab.com/settings/developer",
+                    "github_url": "https://github.com/DeLuca21/ynab-ha/issues",
+                    "api_terms_url": "https://api.ynab.com/#terms",
+                },
                 errors=errors
             )
 
@@ -78,6 +83,11 @@ class ConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
                     vol.Required(CONF_ACCESS_TOKEN): str,
                     vol.Required("Accept Terms", default=False): bool  # Custom label again for consistency
                 }),
+                description_placeholders={
+                    "developer_url": "https://app.ynab.com/settings/developer",
+                    "github_url": "https://github.com/DeLuca21/ynab-ha/issues",
+                    "api_terms_url": "https://api.ynab.com/#terms",
+                },
                 errors=errors
             )
 
@@ -120,7 +130,19 @@ class ConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
                 _LOGGER.exception("Unexpected exception")
                 errors["base"] = "unknown"
 
-        return self.async_show_form(step_id="user", errors=errors)
+        return self.async_show_form(
+            step_id="user",
+            data_schema=vol.Schema({
+                vol.Required(CONF_ACCESS_TOKEN): str,
+                vol.Required("Accept Terms", default=False): bool
+            }),
+            errors=errors,
+            description_placeholders={
+                "developer_url": "https://app.ynab.com/settings/developer",
+                "github_url": "https://github.com/DeLuca21/ynab-ha/issues",
+                "api_terms_url": "https://api.ynab.com/#terms",
+            }
+        )
 
     async def async_step_budget_selection(self, user_input: Dict[str, Any] | None = None) -> FlowResult:
         """Handle budget selection."""
