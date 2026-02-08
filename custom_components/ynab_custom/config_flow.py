@@ -30,6 +30,7 @@ CURRENCY_OPTIONS = {
     "SEK": "kr (Swedish Krona)",
     "NZD": "NZ$ (New Zealand Dollar)",
     "CZK": "Kč (Czech Crown)",
+    "NIS": "₪ (New Israeli Shekel)",
 }
 
 # Polling interval options (5-60 minutes)

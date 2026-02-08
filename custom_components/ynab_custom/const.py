@@ -30,5 +30,6 @@ def get_currency_symbol(currency_code):
         "SEK": "kr",
         "NZD": "NZ$",
         "CZK": "Kč",
+        "NIS": "₪",
     }
     return currency_map.get(currency_code, "$")  # Default to USD if not found
