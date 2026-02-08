@@ -28,32 +28,17 @@
 
 ---
 
-##  What's New in v1.5.1?
+##  What's New in v1.5.2?
 
-### 📊 **Statistics API Support**
-- **Home Assistant Statistics API** now fully supported for all YNAB sensors
-- **Programmatic data access** - use YNAB data in automations, scripts, and custom dashboards
-- **Rich statistical data** - access state, change, and sum values for account and category balances
+### 💰 **New Currency Support**
+- **Czech Crown (CZK)** – full support with proper symbol (Kč)
+- **New Israeli Shekel (NIS)** – full support with proper symbol (₪)
+- **Complete integration** – both currencies work across all sensors and displays
 
----
-
-##  What's New in v1.5.0?
-
-### 🎛️ **Post-Setup Configuration (Configure Button)**
-- **"Configure" button** now available in integration settings - no more re-installing to change settings!
-- **Instance name changes** - update your budget's display name anytime
-- **Currency format updates** - change currency display without reinstalling
-- **Update interval changes** - adjust refresh frequency without reinstalling
-- **Dynamic account/category selection** - add/remove accounts and categories after setup
-- **Filter toggles** - include/exclude closed accounts and hidden categories anytime
-
-
-### 🔧 **Enhanced API Status & Diagnostics**
-- **Comprehensive API status sensor** with detailed rate limit tracking
-- **Persistent data storage** - sensors retain data during rate limits and HA restarts
-- **Intelligent status detection** - accurately shows "Rate Limited" vs "Connected" status
-- **Request tracking** - monitor API usage across all YNAB integrations
-- **Rolling window rate limit** - proper calculation of when rate limits reset
+### 🔧 **Technical Improvements**
+- **Hassfest validation fix** – removed hardcoded URLs from translation strings
+- **Description placeholders** – URLs now properly passed via `description_placeholders` in config flow
+- **GitHub Actions** – integration now passes all hassfest validation checks
 
 ---
 
@@ -207,18 +192,15 @@ The **Monthly Summary sensor**, located under the **Extras** device, provides an
 
 ## 🔄 Recent Updates
 
-### 🎉 Version 1.4.2 Update
+### 🎉 Version 1.5.1 Update
 
-**Critical Migration & Stability Fixes:**
-- **Fixed "Migration Error"** when upgrading from v1.4.0
-- **Robust config entry migration** with proper fallback handling
-- **Fixed TypeError crashes** when YNAB returns `null` values for goal fields
-- **Improved update reliability** - no more "Task exception was never retrieved" errors
-- **Enhanced logging** for better troubleshooting
-
-**Filter Options (New Setups Only):**
-- **Closed accounts** and **hidden categories** are now excluded by default for cleaner dashboards
-- Available during initial setup - **delete and re-add integration** to access these options
+**Statistics API Support:**
+- **Home Assistant Statistics API** now fully supported for all YNAB sensors
+- **Programmatic data access** - use YNAB data in automations, scripts, and custom dashboards
+- **Rich statistical data** - access state, change, and sum values for account and category balances
+- **Entity class metadata** - added proper `device_class` and `state_class` properties to all sensors
+- **Statistics calculation** - Home Assistant now properly tracks and calculates statistical data
+- **API compatibility** - `recorder.get_statistics` service now returns meaningful data instead of empty results
 
 ---
 
