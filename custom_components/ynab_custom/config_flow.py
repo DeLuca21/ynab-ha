@@ -29,6 +29,7 @@ CURRENCY_OPTIONS = {
     "CHF": "CHF (Swiss Franc)",
     "SEK": "kr (Swedish Krona)",
     "NZD": "NZ$ (New Zealand Dollar)",
+    "CZK": "Kč (Czech Crown)",
     "NIS": "₪ (New Israeli Shekel)",
 }
 
