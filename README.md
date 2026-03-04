@@ -28,17 +28,14 @@
 
 ---
 
-##  What's New in v1.5.2?
+##  What's New in v1.5.3?
 
-### 💰 **New Currency Support**
-- **Czech Crown (CZK)** – full support with proper symbol (Kč)
-- **New Israeli Shekel (NIS)** – full support with proper symbol (₪)
-- **Complete integration** – both currencies work across all sensors and displays
+### 🐛 **Bug Fixes**
+- **Ready to Assign category fix** – corrected "Inflow: Ready to Assign" to display the correct current month value instead of lifetime balance
+- **Balance accuracy** – Ready to Assign now shows the actual amount available to assign, matching YNAB's "To Be Budgeted" value
 
-### 🔧 **Technical Improvements**
-- **Hassfest validation fix** – removed hardcoded URLs from translation strings
-- **Description placeholders** – URLs now properly passed via `description_placeholders` in config flow
-- **GitHub Actions** – integration now passes all hassfest validation checks
+### ✨ **Enhancements**
+- **Assigned this month attribute** – added `assigned_this_month` attribute to Ready to Assign category sensor showing how much was assigned this month
 
 ---
 
@@ -192,15 +189,14 @@ The **Monthly Summary sensor**, located under the **Extras** device, provides an
 
 ## 🔄 Recent Updates
 
-### 🎉 Version 1.5.1 Update
-
-**Statistics API Support:**
-- **Home Assistant Statistics API** now fully supported for all YNAB sensors
-- **Programmatic data access** - use YNAB data in automations, scripts, and custom dashboards
-- **Rich statistical data** - access state, change, and sum values for account and category balances
-- **Entity class metadata** - added proper `device_class` and `state_class` properties to all sensors
-- **Statistics calculation** - Home Assistant now properly tracks and calculates statistical data
-- **API compatibility** - `recorder.get_statistics` service now returns meaningful data instead of empty results
+### 💰 Version 1.5.2 Update
+**New Currency Support & Technical Improvements**
+- **Czech Crown (CZK)** – full support with proper symbol (Kč)
+- **New Israeli Shekel (NIS)** – full support with proper symbol (₪)
+- **Complete integration** – both currencies work across all sensors and displays
+- **Hassfest validation fix** – removed hardcoded URLs from translation strings
+- **Description placeholders** – URLs now properly passed via `description_placeholders` in config flow
+- **GitHub Actions** – integration now passes all hassfest validation checks
 
 ---
 
