@@ -390,15 +390,52 @@ class YNABCategorySensor(CoordinatorEntity, SensorEntity):
     @property
     def native_value(self):
         """Return the state of the sensor (category balance)."""
+        # For "Ready to Assign" categories, use the monthly summary's "to_be_budgeted" value
+        # This represents the actual Ready to Assign amount for the current month
+        category_name = self.category.get("name", "")
+        if category_name in ["Inflow: Ready to Assign", "Ready to Assign"]:
+            monthly_summary = self.coordinator.data.get("monthly_summary", {})
+            if monthly_summary and "month" in monthly_summary:
+                month_data = monthly_summary.get("month", {})
+                to_be_budgeted = month_data.get("to_be_budgeted", 0) / 1000
+                if to_be_budgeted != 0:  # Only use if we have valid data
+                    return to_be_budgeted
+        
+        # For all other categories, use the category balance
         return (self.category.get("balance") or 0) / 1000  # Convert from milliunits
 
     @property
     def extra_state_attributes(self):
         """Return additional state attributes."""
-        return {
+        category_name = self.category.get("name", "")
+        
+        # For "Ready to Assign" categories, use to_be_budgeted for balance instead of category balance
+        # The category balance appears to be lifetime/cumulative data, not current month
+        if category_name in ["Inflow: Ready to Assign", "Ready to Assign"]:
+            monthly_summary = self.coordinator.data.get("monthly_summary", {})
+            if monthly_summary and "month" in monthly_summary:
+                month_data = monthly_summary.get("month", {})
+                balance = month_data.get("to_be_budgeted", 0) / 1000
+            else:
+                balance = (self.category.get("balance") or 0) / 1000
+        else:
+            balance = (self.category.get("balance") or 0) / 1000
+        
+        attributes = {
             "budgeted": (self.category.get("budgeted") or 0) / 1000,
             "activity": (self.category.get("activity") or 0) / 1000,
-            "balance":  (self.category.get("balance")  or 0) / 1000,
+            "balance": balance,
+        }
+        
+        if category_name in ["Inflow: Ready to Assign", "Ready to Assign"]:
+            monthly_summary = self.coordinator.data.get("monthly_summary", {})
+            if monthly_summary and "month" in monthly_summary:
+                month_data = monthly_summary.get("month", {})
+                # The "budgeted" field in monthly summary represents total assigned this month
+                assigned_this_month = abs(month_data.get("budgeted", 0) / 1000)
+                attributes["assigned_this_month"] = assigned_this_month
+        
+        attributes.update({
             "category_group": self.category.get("category_group_name") or self.category.get("group_name", "Unknown"),
             "goal_type": self.category.get("goal_type", None),
             "goal_target": (self.category.get("goal_target") or 0) / 1000,
@@ -413,14 +450,14 @@ class YNABCategorySensor(CoordinatorEntity, SensorEntity):
                 if (self.category.get("budgeted") or 0) else 0.0
             ),
             "needs_attention": (
-                (self.category.get("balance") or 0) < 0 or
+                balance < 0 or
                 (
                     (self.category.get("goal_target") or 0) > 0 and
                     (self.category.get("goal_overall_left") or 0) > 0
                 )
             ),
             "attention_reason": (
-                "Overspent" if (self.category.get("balance") or 0) < 0 else
+                "Overspent" if balance < 0 else
                 "Underfunded" if (
                     (self.category.get("goal_target") or 0) > 0 and
                     (self.category.get("goal_overall_left") or 0) > 0
@@ -428,7 +465,9 @@ class YNABCategorySensor(CoordinatorEntity, SensorEntity):
                 "Ok"
             ),
             "hidden": self.category.get("hidden", False),
-        }
+        })
+        
+        return attributes
 
     async def async_added_to_hass(self):
         """When added to Home Assistant, subscribe to updates."""
