@@ -1,7 +1,7 @@
 {
   "domain": "credit_card_management",
   "name": "Credit Card Management",
-  "icon": "mdi:credit-card",
+  
   "codeowners": ["@DeLuca21"],
   "config_flow": true,
   "dependencies": [],
