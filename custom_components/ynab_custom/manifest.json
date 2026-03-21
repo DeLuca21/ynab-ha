@@ -1,6 +1,6 @@
 {
-  "domain": "credit_card_management",
-  "name": "Credit Card Management",
+  "domain": "ynab_custom",
+  "name": "YNAB Integration for Home Assistant",
   
   "codeowners": ["@DeLuca21"],
   "config_flow": true,

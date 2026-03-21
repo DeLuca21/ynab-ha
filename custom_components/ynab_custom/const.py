@@ -1,6 +1,6 @@
 """Constants for YNAB Custom integration."""
 
-DOMAIN = "credit_card_management"
+DOMAIN = "ynab_custom"
 
 CONF_SELECTED_ACCOUNTS = "Select Accounts to Import"
 CONF_SELECTED_CATEGORIES = "Select Categories to Import"
