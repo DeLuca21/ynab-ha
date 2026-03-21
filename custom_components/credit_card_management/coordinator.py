@@ -147,13 +147,8 @@ class YNABDataUpdateCoordinator(DataUpdateCoordinator):
             accounts = await self.api.get_accounts(self.budget_id)
             categories = await self.api.get_categories(self.budget_id)
             
-            # Fetch the monthly summary using the current month - don't fail if this doesn't exist
-            try:
-                monthly_summary = await self.api.get_monthly_summary(self.budget_id, current_month)
-            except Exception as e:
-                _LOGGER.debug(f"Monthly summary fetch failed (non-critical): {e}")
-                monthly_summary = {}
-            
+            # Fetch the monthly summary using the current month
+            monthly_summary = await self.api.get_monthly_summary(self.budget_id, current_month)
             transactions = await self.api.get_transactions(self.budget_id)
 
             # If we get here, all API calls succeeded
