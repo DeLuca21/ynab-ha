@@ -84,7 +84,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
         hass.data[DOMAIN] = {}
 
     hass.data[DOMAIN][entry.entry_id] = coordinator
-    await hass.config_entries.async_forward_entry_setups(entry, ["sensor"])
+    await hass.config_entries.async_forward_entry_setups(entry, ["sensor", "number"])
 
     # Set up options update listener
     entry.async_on_unload(entry.add_update_listener(async_update_options))
@@ -148,7 +148,7 @@ async def async_unload_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     if coordinator:
         await coordinator.async_shutdown()
 
-    result = await hass.config_entries.async_unload_platforms(entry, ["sensor"])
+    result = await hass.config_entries.async_unload_platforms(entry, ["sensor", "number"])
     
     if removed_entities:
         _LOGGER.debug(f"Unload complete for {entry.entry_id} - removed {len(removed_entities)} entities")

@@ -30,6 +30,8 @@ def get_currency_symbol(currency_code):
         "CHF": "CHF",
         "SEK": "kr",
         "NZD": "NZ$",
+        "CZK": "Kč",
+        "NIS": "₪",
     }
     return currency_map.get(currency_code, "$")
 
@@ -52,6 +54,9 @@ async def async_setup_entry(hass, entry, async_add_entities):
 
     # Ensure diagnostics sensors are always added
     entities.append(YNABAPIStatusSensor(coordinator, raw_budget_name))
+    entities.append(YNABTotalCreditLimitSensor(coordinator, currency_symbol, raw_budget_name))
+    entities.append(YNABTotalAvailableCreditSensor(coordinator, currency_symbol, raw_budget_name))
+    entities.append(YNABTotalCreditUtilizationSensor(coordinator, raw_budget_name))
 
     _LOGGER.debug(f"🔹 Coordinator Accounts Data: {coordinator.data.get('accounts', [])}")
 
@@ -60,6 +65,9 @@ async def async_setup_entry(hass, entry, async_add_entities):
         if account["id"] in coordinator.selected_accounts:
             _LOGGER.debug(f"🔹 Adding Account Sensor: {account}")
             entities.append(YNABAccountSensor(coordinator, account, entry, currency_symbol, raw_budget_name))
+            if account.get("type") == "creditCard":
+                entities.append(YNABUtilizationSensor(coordinator, account, entry))
+                entities.append(YNABAvailableCreditSensor(coordinator, account, currency_symbol, entry))
 
     # Create category sensors
     for category in coordinator.data.get("categories", []):
@@ -233,6 +241,171 @@ class YNABAPIStatusSensor(CoordinatorEntity, SensorEntity):
             "last_successful_request": api_status.get("last_successful_request", "Never"),
             "note": "Counts include all YNAB integrations using the same API token",
         }
+
+
+class YNABTotalCreditLimitSensor(CoordinatorEntity, SensorEntity):
+    """Total credit limit across all credit card accounts."""
+
+    _attr_icon = "mdi:credit-card-multiple"
+    _attr_has_entity_name = True
+
+    def __init__(self, coordinator, currency_symbol, instance_name):
+        super().__init__(coordinator)
+        self.coordinator = coordinator
+        self._attr_name = "Total Credit Limit"
+        self._attr_unique_id = f"{coordinator.entry.entry_id}_total_credit_limit"
+        self._attr_native_unit_of_measurement = currency_symbol
+        self._attr_device_info = {
+            "identifiers": {(DOMAIN, f"{coordinator.entry.entry_id}_extras")},
+            "name": f"YNAB {instance_name} - Extras",
+            "manufacturer": "YNAB",
+            "model": "YNAB Extras",
+            "entry_type": "service",
+        }
+
+    @property
+    def native_value(self):
+        total = 0.0
+        for account in self.coordinator.data.get("accounts", []):
+            if account.get("type") == "creditCard":
+                total += self.coordinator.get_credit_limit(account["id"])
+        return round(total, 2)
+
+
+class YNABTotalCreditUtilizationSensor(CoordinatorEntity, SensorEntity):
+    """Overall credit utilization across all credit card accounts."""
+
+    _attr_icon = "mdi:percent"
+    _attr_has_entity_name = True
+    _attr_native_unit_of_measurement = "%"
+
+    def __init__(self, coordinator, instance_name):
+        super().__init__(coordinator)
+        self.coordinator = coordinator
+        self._attr_name = "Total Credit Utilization"
+        self._attr_unique_id = f"{coordinator.entry.entry_id}_total_credit_utilization"
+        self._attr_device_info = {
+            "identifiers": {(DOMAIN, f"{coordinator.entry.entry_id}_extras")},
+            "name": f"YNAB {instance_name} - Extras",
+            "manufacturer": "YNAB",
+            "model": "YNAB Extras",
+            "entry_type": "service",
+        }
+
+    @property
+    def native_value(self):
+        total_balance = 0.0
+        total_limit = 0.0
+        for account in self.coordinator.data.get("accounts", []):
+            if account.get("type") != "creditCard":
+                continue
+            total_balance -= (account.get("balance", 0) / 1000)
+            total_limit += self.coordinator.get_credit_limit(account["id"])
+
+        if total_limit <= 0:
+            return None
+        return round((total_balance / total_limit) * 100, 1)
+
+
+class YNABTotalAvailableCreditSensor(CoordinatorEntity, SensorEntity):
+    """Total available credit across all credit card accounts."""
+
+    _attr_icon = "mdi:credit-card-check"
+    _attr_has_entity_name = True
+
+    def __init__(self, coordinator, currency_symbol, instance_name):
+        super().__init__(coordinator)
+        self.coordinator = coordinator
+        self._attr_name = "Total Available Credit"
+        self._attr_unique_id = f"{coordinator.entry.entry_id}_total_available_credit"
+        self._attr_native_unit_of_measurement = currency_symbol
+        self._attr_device_info = {
+            "identifiers": {(DOMAIN, f"{coordinator.entry.entry_id}_extras")},
+            "name": f"YNAB {instance_name} - Extras",
+            "manufacturer": "YNAB",
+            "model": "YNAB Extras",
+            "entry_type": "service",
+        }
+
+    @property
+    def native_value(self):
+        total_available = 0.0
+        for account in self.coordinator.data.get("accounts", []):
+            if account.get("type") != "creditCard":
+                continue
+            limit = self.coordinator.get_credit_limit(account["id"])
+            if not limit:
+                continue
+            balance = account.get("balance")
+            if balance is None:
+                continue
+            total_available += limit + (balance / 1000)
+
+        return round(total_available, 2)
+
+
+class YNABUtilizationSensor(CoordinatorEntity, SensorEntity):
+    """Credit utilization per credit card account."""
+
+    def __init__(self, coordinator, account, entry):
+        super().__init__(coordinator)
+        self.coordinator = coordinator
+        self.account = account
+
+        account_id = account["id"]
+        budget_id = entry.data["budget_id"]
+        self._attr_name = f"{account['name']} Utilization"
+        self._attr_unique_id = f"{budget_id}_{account_id}_utilization"
+        self._attr_native_unit_of_measurement = "%"
+        self._attr_icon = "mdi:percent"
+        self._attr_device_info = {
+            "identifiers": {(DOMAIN, f"{budget_id}_{account_id}")},
+            "name": account["name"],
+            "manufacturer": "YNAB",
+            "model": "Credit Card",
+        }
+
+    @property
+    def native_value(self):
+        balance = self.account.get("balance") or self.account.get("cleared_balance")
+        if balance is None:
+            return None
+        limit = self.coordinator.get_credit_limit(self.account["id"])
+        if not limit:
+            return None
+        return round((abs(balance / 1000) / limit) * 100, 1)
+
+
+class YNABAvailableCreditSensor(CoordinatorEntity, SensorEntity):
+    """Available credit per credit card account."""
+
+    def __init__(self, coordinator, account, currency_symbol, entry):
+        super().__init__(coordinator)
+        self.coordinator = coordinator
+        self.account = account
+
+        account_id = account["id"]
+        budget_id = entry.data["budget_id"]
+        self._attr_name = f"{account['name']} Available Credit"
+        self._attr_unique_id = f"{budget_id}_{account_id}_available_credit"
+        self._attr_native_unit_of_measurement = currency_symbol
+        self._attr_icon = "mdi:account-credit-card-outline"
+        self._attr_device_info = {
+            "identifiers": {(DOMAIN, f"{budget_id}_{account_id}")},
+            "name": account["name"],
+            "manufacturer": "YNAB",
+            "model": "Credit Card",
+        }
+
+    @property
+    def native_value(self):
+        balance = self.account.get("balance") or self.account.get("cleared_balance")
+        if balance is None:
+            return None
+        limit = self.coordinator.get_credit_limit(self.account["id"])
+        if not limit:
+            return None
+        return round(limit + (balance / 1000), 2)
 
 class YNABAccountSensor(CoordinatorEntity, SensorEntity):
     """YNAB Account Sensor."""

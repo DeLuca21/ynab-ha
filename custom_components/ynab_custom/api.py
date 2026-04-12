@@ -120,18 +120,24 @@ class YNABApi:
         url = f"{self.BASE_URL}/budgets/{budget_id}/months/{current_month}"  # Include the full date with day
         _LOGGER.debug(f"Requesting URL: {url}")  # Log the full URL being requested
 
-        # Fetch the data - let 429 errors propagate to coordinator
-        response = await self._get(url)
-
-        # Log the response data
-        _LOGGER.debug(f"Response for {url}: {response}")
-
-        # If response contains data, return it
-        if response:
-            return response
-        else:
-            _LOGGER.warning(f"No data found for {current_month} in budget: {budget_id}")
-            return {}
+        # Track this request
+        self._track_request()
+        
+        async with aiohttp.ClientSession() as session:
+            async with session.get(url, headers=self.headers) as response:
+                if response.status == 200:
+                    data = await response.json()
+                    return data.get("data", {})
+                elif response.status == 404:
+                    # Month doesn't exist yet - this is normal for future months
+                    _LOGGER.debug(f"Month {current_month} not found (404) - may not exist yet in budget: {budget_id}")
+                    return {}
+                elif response.status == 429:
+                    # Let 429 errors propagate to coordinator
+                    raise Exception(f"429 - Too Many Requests: {url}")
+                else:
+                    _LOGGER.warning(f"YNAB API error: {response.status} - URL: {url}")
+                    return {}
 
     async def get_transactions(self, budget_id: str):
         """Fetch recent transactions for a specific budget."""

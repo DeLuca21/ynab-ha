@@ -58,6 +58,16 @@ class YNABDataUpdateCoordinator(DataUpdateCoordinator):
         
         # Create persistent data key for this budget
         self.persistent_data_key = f"ynab_data_{entry.entry_id}"
+
+        # Store user-managed credit settings separately from API payload snapshots.
+        self._user_store = Store(
+            hass,
+            version=1,
+            key=f"{DOMAIN}_userdata_{entry.entry_id}",
+        )
+        self.credit_limits: dict[str, float] = {}
+        self.aprs: dict[str, float] = {}
+        self.due_days: dict[str, int] = {}
         
         # Get the user-defined update interval with fallbacks: options -> data -> default
         update_interval = (
@@ -83,7 +93,86 @@ class YNABDataUpdateCoordinator(DataUpdateCoordinator):
 
     async def async_load_persistent_data(self):
         """Load persistent data during coordinator initialization."""
+        await self._load_user_values()
         await self._load_persistent_data()
+
+    async def _load_user_values(self) -> None:
+        """Load persisted user-edited credit settings."""
+        stored = await self._user_store.async_load() or {}
+
+        self.credit_limits = {
+            key: float(value) for key, value in stored.get("credit_limits", {}).items()
+        }
+        self.aprs = {
+            key: float(value) for key, value in stored.get("aprs", {}).items()
+        }
+        self.due_days = {
+            key: int(value) for key, value in stored.get("due_days", {}).items()
+        }
+
+        # One-time migration from old config-entry options.
+        migrated = False
+        opts = self.entry.options
+        if not self.credit_limits and "credit_limits" in opts:
+            self.credit_limits = {
+                key: float(value) for key, value in opts["credit_limits"].items()
+            }
+            migrated = True
+
+        if not self.aprs and "aprs" in opts:
+            self.aprs = {
+                key: float(value) for key, value in opts["aprs"].items()
+            }
+            migrated = True
+
+        if not self.due_days and "due_days" in opts:
+            self.due_days = {
+                key: int(value) for key, value in opts["due_days"].items()
+            }
+            migrated = True
+
+        if migrated:
+            new_opts = dict(opts)
+            new_opts.pop("credit_limits", None)
+            new_opts.pop("aprs", None)
+            new_opts.pop("due_days", None)
+            self.hass.config_entries.async_update_entry(self.entry, options=new_opts)
+
+        await self.async_save_user_values()
+
+    async def async_save_user_values(self) -> None:
+        """Persist user-edited credit settings."""
+        await self._user_store.async_save(
+            {
+                "credit_limits": self.credit_limits,
+                "aprs": self.aprs,
+                "due_days": self.due_days,
+            }
+        )
+
+    def get_credit_limit(self, account_id: str) -> float:
+        return float(self.credit_limits.get(account_id, 0.0))
+
+    def get_apr(self, account_id: str) -> float:
+        return float(self.aprs.get(account_id, 0.0))
+
+    def get_due_day(self, account_id: str) -> int | None:
+        return self.due_days.get(account_id)
+
+    async def async_set_credit_limit(self, account_id: str, value: float) -> None:
+        self.credit_limits[account_id] = float(value)
+        await self.async_save_user_values()
+        self.async_set_updated_data(self.data)
+
+    async def async_set_due_day(self, account_id: str, value: int) -> None:
+        self.due_days[account_id] = int(value)
+        await self.async_save_user_values()
+        self.async_set_updated_data(self.data)
+
+    async def async_set_apr(self, account_id: str, value: float) -> None:
+        self.aprs[account_id] = float(value)
+        await self.async_save_user_values()
+        self.async_set_updated_data(self.data)
 
     def get_current_month(self):
         """Returns the current month in YYYY-MM-01 format."""
@@ -147,8 +236,13 @@ class YNABDataUpdateCoordinator(DataUpdateCoordinator):
             accounts = await self.api.get_accounts(self.budget_id)
             categories = await self.api.get_categories(self.budget_id)
             
-            # Fetch the monthly summary using the current month
-            monthly_summary = await self.api.get_monthly_summary(self.budget_id, current_month)
+            # Fetch the monthly summary using the current month - don't fail if this doesn't exist
+            try:
+                monthly_summary = await self.api.get_monthly_summary(self.budget_id, current_month)
+            except Exception as e:
+                _LOGGER.debug(f"Monthly summary fetch failed (non-critical): {e}")
+                monthly_summary = {}
+            
             transactions = await self.api.get_transactions(self.budget_id)
 
             # If we get here, all API calls succeeded
@@ -180,6 +274,15 @@ class YNABDataUpdateCoordinator(DataUpdateCoordinator):
             budget_data["accounts"] = [
                 a for a in accounts.get("accounts", []) if a["id"] in self.selected_accounts
             ]
+
+            for account in budget_data["accounts"]:
+                account_id = account["id"]
+                if account_id in self.credit_limits:
+                    account["credit_limit"] = self.credit_limits[account_id]
+                if account_id in self.aprs:
+                    account["apr"] = self.aprs[account_id]
+                if account_id in self.due_days:
+                    account["due_day"] = self.due_days[account_id]
     
             _LOGGER.debug(f"🔹 Filtered Accounts: {budget_data['accounts']}")
 
