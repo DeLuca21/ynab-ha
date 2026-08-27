@@ -12,6 +12,11 @@ from .const import DOMAIN, CONF_SELECTED_ACCOUNTS, CONF_SELECTED_CATEGORIES, CON
 
 _LOGGER = logging.getLogger(__name__)
 
+# YNAB's transactions endpoint defaults to a one-year window when no since_date
+# is given. Delta syncs are not bound by that window, so the local cache is
+# pruned to the same horizon to keep the stored payload from growing forever.
+TRANSACTION_CACHE_DAYS = 365
+
 
 class YNABDataUpdateCoordinator(DataUpdateCoordinator):
     """Class to manage fetching YNAB data from API."""
@@ -58,6 +63,12 @@ class YNABDataUpdateCoordinator(DataUpdateCoordinator):
         
         # Create persistent data key for this budget
         self.persistent_data_key = f"ynab_data_{entry.entry_id}"
+
+        # Delta-sync state for transactions. transaction_knowledge is YNAB's
+        # server knowledge marker from the last successful sync; while it is
+        # None the next fetch falls back to a full (one-year) refresh.
+        self.transaction_cache = []
+        self.transaction_knowledge = None
         
         # Get the user-defined update interval with fallbacks: options -> data -> default
         update_interval = (
@@ -108,6 +119,16 @@ class YNABDataUpdateCoordinator(DataUpdateCoordinator):
                 # Also restore the API status from persistent data
                 if "api_status" in persistent_data:
                     self.api_status.update(persistent_data["api_status"])
+
+                # Restore the transaction cache so the first poll after a
+                # restart can be a delta rather than a full refresh. A server
+                # knowledge marker is only usable with the cache it was built
+                # from, so both are discarded unless both are present.
+                self.transaction_cache = persistent_data.get("transactions", [])
+                if self.transaction_cache:
+                    self.transaction_knowledge = persistent_data.get(
+                        "transaction_server_knowledge"
+                    )
         except Exception as e:
             _LOGGER.warning(f"Failed to load persistent data for {self.budget_name}: {e}")
     
@@ -127,6 +148,49 @@ class YNABDataUpdateCoordinator(DataUpdateCoordinator):
             _LOGGER.debug(f"💾 Saved persistent data for {self.budget_name}")
         except Exception as e:
             _LOGGER.warning(f"Failed to save persistent data for {self.budget_name}: {e}")
+
+    def _merge_transactions(self, response):
+        """Fold a transactions response into the local cache.
+
+        A full response replaces the cache outright. A delta response only
+        carries what changed since the stored server knowledge, so it is
+        applied on top of what is already there, with deleted transactions
+        dropped rather than kept as tombstones.
+        """
+        # A failed request returns {} rather than raising for non-429 errors.
+        # Clearing the marker makes the next poll a full refresh, so a rejected
+        # or stale server knowledge value cannot wedge the cache permanently.
+        if not response:
+            if self.transaction_knowledge is not None:
+                _LOGGER.debug(
+                    "Empty transactions response - forcing a full refresh next poll"
+                )
+                self.transaction_knowledge = None
+            return self.transaction_cache
+
+        changed = response.get("transactions", [])
+
+        if self.transaction_knowledge is None:
+            merged = {t["id"]: t for t in changed}
+        else:
+            merged = {t["id"]: t for t in self.transaction_cache}
+            merged.update({t["id"]: t for t in changed})
+            _LOGGER.debug("Applied %d changed transactions from delta", len(changed))
+
+        cutoff = (
+            datetime.now() - timedelta(days=TRANSACTION_CACHE_DAYS)
+        ).strftime("%Y-%m-%d")
+        self.transaction_cache = [
+            t
+            for t in merged.values()
+            if not t.get("deleted", False) and t.get("date", "") >= cutoff
+        ]
+
+        server_knowledge = response.get("server_knowledge")
+        if server_knowledge:
+            self.transaction_knowledge = server_knowledge
+
+        return self.transaction_cache
 
     async def _async_update_data(self):
         """Fetch budget details from the API."""
@@ -154,7 +218,10 @@ class YNABDataUpdateCoordinator(DataUpdateCoordinator):
                 _LOGGER.debug(f"Monthly summary fetch failed (non-critical): {e}")
                 monthly_summary = {}
             
-            transactions = await self.api.get_transactions(self.budget_id)
+            transactions = await self.api.get_transactions(
+                self.budget_id, self.transaction_knowledge
+            )
+            merged_transactions = self._merge_transactions(transactions)
 
             # If we get here, all API calls succeeded
             api_call_success = True
@@ -196,7 +263,8 @@ class YNABDataUpdateCoordinator(DataUpdateCoordinator):
 
             # Store the monthly summary data
             budget_data["monthly_summary"] = monthly_summary
-            budget_data["transactions"] = transactions.get("transactions", [])
+            budget_data["transactions"] = merged_transactions
+            budget_data["transaction_server_knowledge"] = self.transaction_knowledge
 
             # Store Last Successful Poll in budget_data (only when API calls succeed)
             budget_data["last_successful_poll"] = last_successful_poll

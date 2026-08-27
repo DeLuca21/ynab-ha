@@ -139,13 +139,21 @@ class YNABApi:
                     _LOGGER.warning(f"YNAB API error: {response.status} - URL: {url}")
                     return {}
 
-    async def get_transactions(self, budget_id: str):
-        """Fetch recent transactions for a specific budget."""
+    async def get_transactions(self, budget_id: str, last_knowledge_of_server=None):
+        """Fetch transactions for a specific budget.
+
+        When last_knowledge_of_server is supplied, YNAB returns only the
+        transactions that have changed since that point (including tombstones
+        for deleted ones) rather than the default one-year window. The caller
+        is responsible for merging the delta into its own cache.
+        """
         if not budget_id or budget_id == "budgets":
             _LOGGER.error("Invalid budget_id before transactions API call: %s", budget_id)
             return {}
 
         url = f"{self.BASE_URL}/budgets/{budget_id}/transactions"
+        if last_knowledge_of_server:
+            url = f"{url}?last_knowledge_of_server={last_knowledge_of_server}"
         _LOGGER.debug("Fetching transactions from URL: %s", url)
         return await self._get(url)
 
