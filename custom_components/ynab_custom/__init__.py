@@ -21,8 +21,7 @@ def sanitize_budget_name(budget_name: str) -> str:
 async def async_migrate_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     """Migrate config entry from version 1 to version 2."""
     _LOGGER.info(f"Migrating YNAB config entry {entry.entry_id} from version {entry.version} to version 2")
-    _LOGGER.debug(f"Entry data before migration: {entry.data}")
-    _LOGGER.debug(f"Entry options before migration: {entry.options}")
+    # Config entries contain access tokens; never log their data or options.
     
     try:
         # Create new data and options dictionaries
@@ -51,8 +50,6 @@ async def async_migrate_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
         )
         
         _LOGGER.info(f"Successfully migrated YNAB config entry {entry.entry_id} to version 2")
-        _LOGGER.debug(f"Entry data after migration: {new_data}")
-        _LOGGER.debug(f"Entry options after migration: {new_options}")
         return True
         
     except Exception as e:
@@ -104,8 +101,10 @@ async def async_update_options(hass: HomeAssistant, entry: ConfigEntry) -> None:
         new_accounts = set(entry.data.get(CONF_SELECTED_ACCOUNTS, []))
         new_categories = set(entry.data.get(CONF_SELECTED_CATEGORIES, []))
         
-        _LOGGER.debug(f"Options update - OLD accounts: {old_accounts}, NEW accounts: {new_accounts}")
-        _LOGGER.debug(f"Options update - OLD categories: {old_categories}, NEW categories: {new_categories}")
+        _LOGGER.debug(
+            "Options update - accounts: %d -> %d, categories: %d -> %d",
+            len(old_accounts), len(new_accounts), len(old_categories), len(new_categories),
+        )
         
         if old_accounts != new_accounts or old_categories != new_categories:
             _LOGGER.info(f"Account/category selections changed - doing full unload/reload cycle")

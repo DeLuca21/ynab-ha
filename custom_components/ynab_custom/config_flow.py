@@ -114,7 +114,7 @@ class ConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
                 raise CannotConnect
 
             self.budgets = {b["id"]: b["name"] for b in budgets_response["budgets"]}
-            _LOGGER.debug("Available budgets: %s", self.budgets)
+            _LOGGER.debug("Fetched %d available budgets", len(self.budgets))
 
             return await self.async_step_budget_selection()
 

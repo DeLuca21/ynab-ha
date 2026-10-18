@@ -55,20 +55,17 @@ async def async_setup_entry(hass, entry, async_add_entities):
     # Ensure diagnostics sensors are always added
     entities.append(YNABAPIStatusSensor(coordinator, raw_budget_name))
 
-    _LOGGER.debug(f"🔹 Coordinator Accounts Data: {coordinator.data.get('accounts', [])}")
-
     # Create account sensors
     for account in coordinator.data.get("accounts", []):
         if account["id"] in coordinator.selected_accounts:
-            _LOGGER.debug(f"🔹 Adding Account Sensor: {account}")
             entities.append(YNABAccountSensor(coordinator, account, entry, currency_symbol, raw_budget_name))
 
     # Create category sensors
     for category in coordinator.data.get("categories", []):
         if category["id"] in coordinator.selected_categories:
-            _LOGGER.debug(f"🔹 Adding Category Sensor: {category}")
             entities.append(YNABCategorySensor(coordinator, category, entry, currency_symbol, raw_budget_name))
 
+    _LOGGER.debug("Adding %d YNAB sensors", len(entities))
     # Add the entity list for the sensors
     async_add_entities(entities)
 

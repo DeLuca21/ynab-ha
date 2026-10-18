@@ -186,7 +186,7 @@ class YNABDataUpdateCoordinator(DataUpdateCoordinator):
                 a for a in accounts.get("accounts", []) if a["id"] in self.selected_accounts
             ]
     
-            _LOGGER.debug(f"🔹 Filtered Accounts: {budget_data['accounts']}")
+            _LOGGER.debug("Selected %d accounts", len(budget_data["accounts"]))
 
             # Filter categories based on user selection
             budget_data["categories"] = [
