@@ -28,7 +28,79 @@
           "data": {
             "selected_accounts": "Select Accounts to Sync",
             "selected_categories": "Select Categories to Sync",
-            "update_interval": "Set Update Interval (in minutes)"
+            "update_interval": "Set Update Interval (in minutes)",
+            "Users Allowed to Move Money": "Users allowed to move money"
+          },
+          "data_description": {
+            "Users Allowed to Move Money": "Home Assistant users who can move money with the YNAB services. Leave empty to block everyone."
+          }
+        }
+      }
+    },
+    "services": {
+      "get_category_history": {
+        "name": "Get category history",
+        "description": "Return the recorded changes to a category's balance, newest first, with the reason for each where known.",
+        "fields": {
+          "category": {
+            "name": "Category",
+            "description": "Category sensor to read the history of."
+          },
+          "limit": {
+            "name": "Limit",
+            "description": "Most changes to return."
+          }
+        }
+      },
+      "move_category_money": {
+        "name": "Move category money",
+        "description": "Reassign money between two YNAB categories for the current month, like moving money in the YNAB app. Only users allowed in the integration options can call it.",
+        "fields": {
+          "from_category": {
+            "name": "From category",
+            "description": "Category sensor to take money from. Leave empty to use Ready to Assign."
+          },
+          "to_category": {
+            "name": "To category",
+            "description": "Category sensor to give money to. Leave empty to use Ready to Assign."
+          },
+          "amount": {
+            "name": "Amount",
+            "description": "How much to move, in the budget's currency."
+          },
+          "allow_overdraw": {
+            "name": "Allow overdraw",
+            "description": "Allow moving more than the source has available."
+          }
+        }
+      },
+      "transfer_account_money": {
+        "name": "Transfer account money",
+        "description": "Create a YNAB transfer between two accounts. Only users allowed in the integration options can call it.",
+        "fields": {
+          "from_account": {
+            "name": "From account",
+            "description": "Account sensor to transfer money out of."
+          },
+          "to_account": {
+            "name": "To account",
+            "description": "Account sensor to transfer money into."
+          },
+          "amount": {
+            "name": "Amount",
+            "description": "How much to transfer, in the budget's currency."
+          },
+          "category": {
+            "name": "Category",
+            "description": "Category sensor for the on-budget side. Required when one account is a tracking account."
+          },
+          "memo": {
+            "name": "Memo",
+            "description": "Memo for the transaction. Defaults to who moved it."
+          },
+          "allow_overdraw": {
+            "name": "Allow overdraw",
+            "description": "Allow transferring more than the source account holds."
           }
         }
       }

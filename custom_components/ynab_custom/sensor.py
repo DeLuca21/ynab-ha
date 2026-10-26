@@ -6,7 +6,7 @@ from homeassistant.components.sensor import SensorEntity, SensorDeviceClass, Sen
 from homeassistant.const import CONF_CURRENCY
 from homeassistant.core import callback
 from .coordinator import YNABDataUpdateCoordinator
-from .const import DOMAIN
+from .const import DOMAIN, READY_TO_ASSIGN_NAMES
 from .icons import CATEGORY_ICONS, ACCOUNT_ICONS
 from homeassistant.helpers.entity import EntityCategory
 
@@ -393,7 +393,7 @@ class YNABCategorySensor(CoordinatorEntity, SensorEntity):
         # For "Ready to Assign" categories, use the monthly summary's "to_be_budgeted" value
         # This represents the actual Ready to Assign amount for the current month
         category_name = self.category.get("name", "")
-        if category_name in ["Inflow: Ready to Assign", "Ready to Assign"]:
+        if category_name in READY_TO_ASSIGN_NAMES:
             monthly_summary = self.coordinator.data.get("monthly_summary", {})
             if monthly_summary and "month" in monthly_summary:
                 month_data = monthly_summary.get("month", {})
@@ -411,7 +411,7 @@ class YNABCategorySensor(CoordinatorEntity, SensorEntity):
         
         # For "Ready to Assign" categories, use to_be_budgeted for balance instead of category balance
         # The category balance appears to be lifetime/cumulative data, not current month
-        if category_name in ["Inflow: Ready to Assign", "Ready to Assign"]:
+        if category_name in READY_TO_ASSIGN_NAMES:
             monthly_summary = self.coordinator.data.get("monthly_summary", {})
             if monthly_summary and "month" in monthly_summary:
                 month_data = monthly_summary.get("month", {})
@@ -427,7 +427,7 @@ class YNABCategorySensor(CoordinatorEntity, SensorEntity):
             "balance": balance,
         }
         
-        if category_name in ["Inflow: Ready to Assign", "Ready to Assign"]:
+        if category_name in READY_TO_ASSIGN_NAMES:
             monthly_summary = self.coordinator.data.get("monthly_summary", {})
             if monthly_summary and "month" in monthly_summary:
                 month_data = monthly_summary.get("month", {})
@@ -466,6 +466,14 @@ class YNABCategorySensor(CoordinatorEntity, SensorEntity):
             ),
             "hidden": self.category.get("hidden", False),
         })
+
+        # Why the balance last changed. Being attributes, they are recorded
+        # with each state change, so the history shows the reason beside the
+        # balance; the full record is in the ledger.
+        if category_name not in READY_TO_ASSIGN_NAMES:
+            recent = self.coordinator.ledger.recent(self.category["id"])
+            attributes["last_change"] = recent[0] if recent else None
+            attributes["recent_changes"] = recent
         
         return attributes
 

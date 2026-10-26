@@ -4,13 +4,23 @@ import logging
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers.typing import ConfigType
+from homeassistant.helpers import config_validation as cv
 from homeassistant.helpers import entity_registry as er
 import re
 
 from .const import DOMAIN, CONF_UPDATE_INTERVAL, DEFAULT_UPDATE_INTERVAL, CONF_INCLUDE_CLOSED_ACCOUNTS, CONF_INCLUDE_HIDDEN_CATEGORIES, DEFAULT_INCLUDE_CLOSED_ACCOUNTS, DEFAULT_INCLUDE_HIDDEN_CATEGORIES, CONF_SELECTED_ACCOUNTS, CONF_SELECTED_CATEGORIES
 from .coordinator import YNABDataUpdateCoordinator
+from .services import async_register_services
 
 _LOGGER = logging.getLogger(__name__)
+
+CONFIG_SCHEMA = cv.config_entry_only_config_schema(DOMAIN)
+
+
+async def async_setup(hass: HomeAssistant, config: ConfigType) -> bool:
+    """Set up the YNAB Custom services."""
+    async_register_services(hass)
+    return True
 
 def sanitize_budget_name(budget_name: str) -> str:
     """Sanitize the budget name to create a valid Home Assistant entity ID."""

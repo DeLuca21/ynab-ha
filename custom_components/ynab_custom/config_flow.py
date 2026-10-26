@@ -11,7 +11,7 @@ from homeassistant.helpers import config_validation as cv
 from homeassistant.data_entry_flow import FlowResult
 from homeassistant.core import callback
 
-from .const import DOMAIN, CONF_SELECTED_ACCOUNTS, CONF_SELECTED_CATEGORIES, CONF_CURRENCY, CONF_SELECTED_BUDGET, CONF_UPDATE_INTERVAL, DEFAULT_UPDATE_INTERVAL, CONF_INCLUDE_CLOSED_ACCOUNTS, CONF_INCLUDE_HIDDEN_CATEGORIES, DEFAULT_INCLUDE_CLOSED_ACCOUNTS, DEFAULT_INCLUDE_HIDDEN_CATEGORIES
+from .const import DOMAIN, CONF_SELECTED_ACCOUNTS, CONF_SELECTED_CATEGORIES, CONF_CURRENCY, CONF_SELECTED_BUDGET, CONF_UPDATE_INTERVAL, DEFAULT_UPDATE_INTERVAL, CONF_INCLUDE_CLOSED_ACCOUNTS, CONF_INCLUDE_HIDDEN_CATEGORIES, DEFAULT_INCLUDE_CLOSED_ACCOUNTS, DEFAULT_INCLUDE_HIDDEN_CATEGORIES, CONF_MONEY_MOVERS
 from .api import YNABApi
 
 _LOGGER = logging.getLogger(__name__)
@@ -385,6 +385,13 @@ class OptionsFlow(config_entries.OptionsFlow):
             self.api = YNABApi(self.access_token, self.hass.data[DOMAIN][api_token_key])
             _LOGGER.debug("OptionsFlow API initialized with shared tracking")
 
+        # Home Assistant people who may move money with this budget's services
+        self.user_options = {
+            user.id: user.name
+            for user in await self.hass.auth.async_get_users()
+            if not user.system_generated and user.is_active
+        }
+
         if user_input is not None:
             # Process the form submission
             instance_name = user_input.get("instance_name", self.entry_data.get("instance_name", self.budget_name))
@@ -396,6 +403,7 @@ class OptionsFlow(config_entries.OptionsFlow):
             _LOGGER.debug(f"Form submitted with include_closed: {include_closed_accounts}, include_hidden: {include_hidden_categories}")
             selected_accounts = user_input.get(CONF_SELECTED_ACCOUNTS, [])
             selected_categories = user_input.get(CONF_SELECTED_CATEGORIES, [])
+            money_movers = user_input.get(CONF_MONEY_MOVERS, [])
 
             # Handle filtering changes and "Select All" logic
             filtered_accounts = self._filter_accounts(include_closed_accounts)
@@ -451,6 +459,7 @@ class OptionsFlow(config_entries.OptionsFlow):
                 CONF_UPDATE_INTERVAL: update_interval,
                 CONF_INCLUDE_CLOSED_ACCOUNTS: include_closed_accounts,
                 CONF_INCLUDE_HIDDEN_CATEGORIES: include_hidden_categories,
+                CONF_MONEY_MOVERS: money_movers,
             })
 
             # Get config entry from hass
@@ -463,7 +472,8 @@ class OptionsFlow(config_entries.OptionsFlow):
                     title=instance_name,
                 )
 
-            return self.async_create_entry(title="", data={})
+            # The flow's result becomes entry.options, so it must carry them all
+            return self.async_create_entry(title="", data=new_options)
 
         # Fetch current accounts and categories
         try:
@@ -552,6 +562,11 @@ class OptionsFlow(config_entries.OptionsFlow):
                 CONF_INCLUDE_HIDDEN_CATEGORIES: current_include_hidden,
                 CONF_SELECTED_ACCOUNTS: current_selected_accounts,
                 CONF_SELECTED_CATEGORIES: current_selected_categories,
+                # Drop users who have since been removed so the form validates
+                CONF_MONEY_MOVERS: [
+                    user_id for user_id in self.entry_options.get(CONF_MONEY_MOVERS, [])
+                    if user_id in self.user_options
+                ],
             }
 
             schema = self._build_config_schema(current_values)
@@ -623,6 +638,7 @@ class OptionsFlow(config_entries.OptionsFlow):
             vol.Optional(CONF_INCLUDE_HIDDEN_CATEGORIES, default=defaults.get(CONF_INCLUDE_HIDDEN_CATEGORIES, DEFAULT_INCLUDE_HIDDEN_CATEGORIES)): bool,
             vol.Required(CONF_SELECTED_ACCOUNTS, default=defaults.get(CONF_SELECTED_ACCOUNTS, [SELECT_ALL_OPTION])): cv.multi_select(account_options),
             vol.Required(CONF_SELECTED_CATEGORIES, default=defaults.get(CONF_SELECTED_CATEGORIES, [SELECT_ALL_OPTION])): cv.multi_select(category_options),
+            vol.Optional(CONF_MONEY_MOVERS, default=defaults.get(CONF_MONEY_MOVERS, [])): cv.multi_select(self.user_options),
         })
 
 

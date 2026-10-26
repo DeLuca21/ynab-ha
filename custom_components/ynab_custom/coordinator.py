@@ -8,9 +8,15 @@ from homeassistant.helpers.update_coordinator import DataUpdateCoordinator
 from homeassistant.helpers.storage import Store
 from homeassistant.config_entries import ConfigEntry
 from .api import YNABApi
-from .const import DOMAIN, CONF_SELECTED_ACCOUNTS, CONF_SELECTED_CATEGORIES, CONF_CURRENCY, CONF_UPDATE_INTERVAL, DEFAULT_UPDATE_INTERVAL, get_currency_symbol
+from .ledger import CategoryLedger
+from .const import DOMAIN, CONF_SELECTED_ACCOUNTS, CONF_SELECTED_CATEGORIES, CONF_CURRENCY, CONF_UPDATE_INTERVAL, DEFAULT_UPDATE_INTERVAL, READY_TO_ASSIGN_NAMES, get_currency_symbol
 
 _LOGGER = logging.getLogger(__name__)
+
+# YNAB's transactions endpoint defaults to a one-year window when no since_date
+# is given. Delta syncs are not bound by that window, so the local cache is
+# pruned to the same horizon to keep the stored payload from growing forever.
+TRANSACTION_CACHE_DAYS = 365
 
 
 class YNABDataUpdateCoordinator(DataUpdateCoordinator):
@@ -58,6 +64,12 @@ class YNABDataUpdateCoordinator(DataUpdateCoordinator):
         
         # Create persistent data key for this budget
         self.persistent_data_key = f"ynab_data_{entry.entry_id}"
+
+        # Delta-sync state for transactions. transaction_knowledge is YNAB's
+        # server knowledge marker from the last successful sync; while it is
+        # None the next fetch falls back to a full (one-year) refresh.
+        self.transaction_cache = []
+        self.transaction_knowledge = None
         
         # Get the user-defined update interval with fallbacks: options -> data -> default
         update_interval = (
@@ -68,6 +80,10 @@ class YNABDataUpdateCoordinator(DataUpdateCoordinator):
 
         # Fetch the currency symbol from the config entry
         self.currency_symbol = get_currency_symbol(self.entry.data.get(CONF_CURRENCY, "USD"))  # Convert to correct symbol
+
+        # Why each category's balance changed, kept beyond the recorder's purge
+        self.ledger = CategoryLedger(hass, entry.entry_id, self.currency_symbol)
+        self._changed_transactions = []
 
 
 
@@ -84,6 +100,7 @@ class YNABDataUpdateCoordinator(DataUpdateCoordinator):
     async def async_load_persistent_data(self):
         """Load persistent data during coordinator initialization."""
         await self._load_persistent_data()
+        await self.ledger.async_load()
 
     def get_current_month(self):
         """Returns the current month in YYYY-MM-01 format."""
@@ -108,6 +125,16 @@ class YNABDataUpdateCoordinator(DataUpdateCoordinator):
                 # Also restore the API status from persistent data
                 if "api_status" in persistent_data:
                     self.api_status.update(persistent_data["api_status"])
+
+                # Restore the transaction cache so the first poll after a
+                # restart can be a delta rather than a full refresh. A server
+                # knowledge marker is only usable with the cache it was built
+                # from, so both are discarded unless both are present.
+                self.transaction_cache = persistent_data.get("transactions", [])
+                if self.transaction_cache:
+                    self.transaction_knowledge = persistent_data.get(
+                        "transaction_server_knowledge"
+                    )
         except Exception as e:
             _LOGGER.warning(f"Failed to load persistent data for {self.budget_name}: {e}")
     
@@ -127,6 +154,50 @@ class YNABDataUpdateCoordinator(DataUpdateCoordinator):
             _LOGGER.debug(f"💾 Saved persistent data for {self.budget_name}")
         except Exception as e:
             _LOGGER.warning(f"Failed to save persistent data for {self.budget_name}: {e}")
+
+    def _merge_transactions(self, response):
+        """Fold a transactions response into the local cache.
+
+        A full response replaces the cache outright. A delta response only
+        carries what changed since the stored server knowledge, so it is
+        applied on top of what is already there, with deleted transactions
+        dropped rather than kept as tombstones.
+        """
+        # A failed request returns {} rather than raising for non-429 errors.
+        # Clearing the marker makes the next poll a full refresh, so a rejected
+        # or stale server knowledge value cannot wedge the cache permanently.
+        if not response:
+            if self.transaction_knowledge is not None:
+                _LOGGER.debug(
+                    "Empty transactions response - forcing a full refresh next poll"
+                )
+                self.transaction_knowledge = None
+            return self.transaction_cache
+
+        changed = response.get("transactions", [])
+        self._changed_transactions = changed
+
+        if self.transaction_knowledge is None:
+            merged = {t["id"]: t for t in changed}
+        else:
+            merged = {t["id"]: t for t in self.transaction_cache}
+            merged.update({t["id"]: t for t in changed})
+            _LOGGER.debug("Applied %d changed transactions from delta", len(changed))
+
+        cutoff = (
+            datetime.now() - timedelta(days=TRANSACTION_CACHE_DAYS)
+        ).strftime("%Y-%m-%d")
+        self.transaction_cache = [
+            t
+            for t in merged.values()
+            if not t.get("deleted", False) and t.get("date", "") >= cutoff
+        ]
+
+        server_knowledge = response.get("server_knowledge")
+        if server_knowledge:
+            self.transaction_knowledge = server_knowledge
+
+        return self.transaction_cache
 
     async def _async_update_data(self):
         """Fetch budget details from the API."""
@@ -154,7 +225,12 @@ class YNABDataUpdateCoordinator(DataUpdateCoordinator):
                 _LOGGER.debug(f"Monthly summary fetch failed (non-critical): {e}")
                 monthly_summary = {}
             
-            transactions = await self.api.get_transactions(self.budget_id)
+            full_refresh = self.transaction_knowledge is None
+            self._changed_transactions = []
+            transactions = await self.api.get_transactions(
+                self.budget_id, self.transaction_knowledge
+            )
+            merged_transactions = self._merge_transactions(transactions)
 
             # If we get here, all API calls succeeded
             api_call_success = True
@@ -194,9 +270,15 @@ class YNABDataUpdateCoordinator(DataUpdateCoordinator):
                 for c in c_group.get("categories", []) if c["id"] in self.selected_categories
             ]
 
+            self.ledger.observe(
+                [c for c in budget_data["categories"] if c.get("name") not in READY_TO_ASSIGN_NAMES],
+                current_month, self._changed_transactions, full_refresh
+            )
+
             # Store the monthly summary data
             budget_data["monthly_summary"] = monthly_summary
-            budget_data["transactions"] = transactions.get("transactions", [])
+            budget_data["transactions"] = merged_transactions
+            budget_data["transaction_server_knowledge"] = self.transaction_knowledge
 
             # Store Last Successful Poll in budget_data (only when API calls succeed)
             budget_data["last_successful_poll"] = last_successful_poll
